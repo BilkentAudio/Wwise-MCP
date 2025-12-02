@@ -11,8 +11,8 @@ Python bridge for interacting with Wwise 2024.1 using the Model Context Protocol
 3. Create a virtual environment in desired location:
    ```bash
    cd C:\path\to\your\project
-   python3.13 -m venv .venv # On macOS
-   py -3.13 -m venv .venv  # On Windows
+   python3.13 -m venv .venv   # On macOS
+   py -3.13 -m venv .venv     # On Windows
    ```
 4. Activate the virtual environment:
    ```bash
