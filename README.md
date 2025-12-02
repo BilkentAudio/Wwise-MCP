@@ -46,8 +46,8 @@ It is still under active development and should not be used with Wwise projects 
 - Install the latest [Wwise-MCP.zip](https://github.com/bilkentaudiodev/Wwise-MCP/releases/tag/v1.0)
 
 ## Setup
-- Once you have the above 3 components installed, configure your MCP Client's json to include the Wwise-MCP application. 
-- Refer to the [setup page](https://github.com/bilkentaudiodev/Wwise-MCP/tree/main/docs/setup) for detailed instructions
+- Once you have the above 3 components installed, configure your MCP Client's (i.e Claude's or Cursor's) json file to include the Wwise-MCP application. 
+- Refer to the [setup page](https://github.com/bilkentaudiodev/Wwise-MCP/tree/main/docs/setup) for detailed instructions for setting up with [Claude](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/docs/setup/Claude/ClaudeSetup.md) and [Cursor](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/docs/setup/Cursor/CursorSetup.md)
 
 # Quickstart
 
