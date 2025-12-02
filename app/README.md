@@ -1,6 +1,6 @@
 # Wwise-MCP (Developer)
 
-Python bridge for interacting with Wwise 2024.1 using the Model Context Protocol (MCP).
+Python bridge for interacting with Wwise 2024.1+ using the Model Context Protocol (MCP).
 
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org)
 
