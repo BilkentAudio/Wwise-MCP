@@ -14,7 +14,7 @@
 </div>
 
 # Wwise-MCP
-Wwise-MCP is a Model Context Protocol server that allows LLMs to interact with Wwise Authoring. It exposes tools from a custom python waapi function library to MCP clients such as Claude or Cursor.
+Wwise-MCP is a Model Context Protocol server that allows LLMs to interact with the Wwise Authoring application. It exposes tools from a custom python waapi function library to MCP clients such as Claude or Cursor.
 
 # ⚠️ Experimental Notice
 
@@ -52,7 +52,7 @@ It is still under active development and should not be used with Wwise projects 
 # Quickstart
 
 1. **Connect to your Wwise project**  
-   Always start by running **“Connect to my Wwise project”**.  
+   Always start with a prompt akin to **“Connect to my Wwise project”**.  
    This attaches Wwise-MCP to your currently open Wwise session.
 
 2. **Let your MCP Client (i.e Claude) “see” your project structure**  
