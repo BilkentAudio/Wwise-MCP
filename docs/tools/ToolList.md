@@ -428,7 +428,7 @@ Valid layouts: `Designer`, `Profiler`, `Soundbank`, `Mixer`, `Audio Object Profi
 
 ---
 
-### `get_all_property_name_and_valid_value_typess`
+### `get_all_property_name_and_valid_value_types`
 
 **Description**  
 Returns a help string listing WAAPI property identifiers and valid value types for a given Wwise object type.
