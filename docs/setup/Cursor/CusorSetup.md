@@ -13,8 +13,8 @@
 4. Go to **Tools & MCP → Add Custom MCP**.
 > <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Cursor/Cursor_Setup_02.png" alt="Cursor_Setup_02" width="1000">
 6. This will open the `mcp.json` file in your editor.
-7. Paste the Wwise-MCP tool configuration snippet into the appropriate section of the config json file. Make sure to set the path to where your Wwise-MCP lives.
-   ```bash
+7. Paste this Wwise-MCP configuration snippet into the appropriate section of the config json file. Make sure to set the path to where your Wwise-MCP lives.
+   ```json
    {
        "mcpServers":
        {
