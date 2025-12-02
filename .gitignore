@@ -11,3 +11,6 @@ dist/
 
 # Logs
 *.log
+
+# DS-Store
+.DS_Store
