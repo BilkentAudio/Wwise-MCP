@@ -5,7 +5,7 @@
 - Install [Wwise 2024.1+](https://www.audiokinetic.com/en/download/)
 - Install [Wwise-MCP](https://github.com/t90786613/TestRepo/releases/tag/v1.0)
 
-## Setup (for Claude)
+## Setup for Windows
 1. Store and unzip the **Wwise-MCP** `.zip` file at your desired location.
 2. Launch the **Claude Desktop** application.
 3. Open **File → Settings**:
