@@ -29,6 +29,6 @@
 > <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Cursor/Cursor_Setup_03.png" alt="Cursor_Setup_03" width="500">
 8. Save the file
 9. If everything works, Wwise-MCP should be visible under **Installed MCPs** and appear **green**.
-> <img src= "https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Cursor/Cursor_Setup_04.png" alt="ClaudeSetup_04" width="1250">
+> <img src= "https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Cursor/Cursor_Setup_04.png" alt="ClaudeSetup_04" width="1500">
 10. When chatting you can toggle between different agents via the button shown below. If unsure of which model, use Grok Code.
 > <img src= "https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Cursor/Cursor_Setup_05.png" alt="ClaudeSetup_05" width="1000">
