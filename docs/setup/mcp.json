@@ -1,0 +1,10 @@
+{
+   "mcpServers":
+   {
+        "wwise-mcp":
+        {
+          "command": "C:\\Your\\PathTo\\Wwise-MCP.exe",
+          "args": []
+        }
+   }
+}
