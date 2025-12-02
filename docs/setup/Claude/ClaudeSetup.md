@@ -9,9 +9,9 @@
 1. Store and unzip the **Wwise-MCP** `.zip` file at your desired location.
 2. Launch the **Claude Desktop** application.
 3. Open **File → Settings**:
-> <img src="https://github.com/t90786613/TestRepo/blob/main/Images/setup/ClaudeSetup_01.png" alt="ClaudeSetup_01" width="500">
+> <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/ClaudeSetup_01.png" alt="ClaudeSetup_01" width="500">
 4. Go to **Developer → Edit config**.
-> <img src="https://github.com/t90786613/TestRepo/blob/main/Images/setup/ClaudeSetup_02.png" alt="ClaudeSetup_01" width="500">
+> <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/ClaudeSetup_02.png" alt="ClaudeSetup_02" width="500">
 6. This will open the `claude_desktop_config.json` file in your default editor.
 7. Paste the Wwise-MCP tool configuration snippet into the appropriate section of the config json file. Make sure to set the path to where your Wwise-MCP lives.
    ```bash
@@ -27,4 +27,4 @@
    }
     ```
 9. Save the file and restart Claude Desktop for the updated JSON to take effect.
-> <img src="https://github.com/t90786613/TestRepo/blob/main/Images/setup/ClaudeSetup_03.png" alt="ClaudeSetup_01" width="500">
+> <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/ClaudeSetup_03.png" alt="ClaudeSetup_03" width="500">
