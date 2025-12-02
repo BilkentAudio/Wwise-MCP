@@ -7,7 +7,7 @@ Python bridge for interacting with Wwise 2024.1 using the Model Context Protocol
 ## Setup
 
 1. Make sure Python 3.13+ is installed
-2. Clone this repo and make sure you can access the python scripts in \Scripts. 
+2. Clone this repo and make sure you can access the python scripts in \scripts. 
 3. Create a virtual environment in desired location:
    ```bash
    cd C:\path\to\your\project
