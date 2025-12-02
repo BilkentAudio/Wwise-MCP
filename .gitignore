@@ -1,0 +1,15 @@
+# Python-generated files
+__pycache__/
+__pycache__.meta
+build/
+dist/
+
+# Virtual environments
+.venv
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
