@@ -37,7 +37,7 @@ Python bridge for interacting with Wwise 2024.1 using the Model Context Protocol
      }
    }
    ```
-7. Make sure to restart your MCP Client (i.e Claude Desktop) for Wwise-MCP to be registered.
+7. Make sure to restart/save your MCP Client (i.e Claude Desktop) for Wwise-MCP to be registered.
 
 You should make sure you have installed dependencies and/or are running in the `uv` virtual environment in order for the scripts to work.
 
