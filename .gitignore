@@ -6,8 +6,6 @@ dist/
 
 # Virtual environments
 .venv
-
-# Environment files
 .env
 .env.*
 
