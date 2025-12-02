@@ -75,7 +75,7 @@ It is still under active development and should not be used with Wwise projects 
   - **setup/** - Instructions for installing and configuring Wwise-MCP and MCP clients ([Claude](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/docs/setup/Claude/ClaudeSetup.md) & [Cursor](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/docs/setup/Cursor/CusorSetup.md))
   - **tools/** - A list of all functionalities and example prompts
 
-- **app/** - Python server and instructions for setting up Python environment can be found in the [README](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/app/README.md)
+- **app/** - Python server. Instructions for setting up Python environment can be found in the [README](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/app/README.md)
   - **scripts/** - Python application source code 
 
 
