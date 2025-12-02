@@ -26,5 +26,5 @@
     }
 }
  ```
-9. Save the file and restart Claude Desktop by going to *File → Exit** for the updated JSON to take effect.
+9. Save the file and restart Claude Desktop by going to **File → Exit** for the updated JSON to take effect.
 > <img src="https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/images/setup/Claude/ClaudeSetup_03.png" alt="ClaudeSetup_03" width="500">
