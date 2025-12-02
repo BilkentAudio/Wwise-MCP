@@ -82,7 +82,7 @@ It is still under active development and should not be used with Wwise projects 
 # Developers
 - Wwise-MCP consists of three Python modules.
 - The main entry point is wwise_mcp.py.
-- Be sure you are using python version >= 3.13
+- Be sure you are using python version 3.13+
 - More info can be found [here](https://github.com/bilkentaudiodev/Wwise-MCP/blob/main/app/README.md)
 
 # License
