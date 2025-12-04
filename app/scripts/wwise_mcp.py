@@ -375,7 +375,8 @@ def set_rtpc(
     
 def set_state(
     state_group: str, 
-    state: str
+    state: str, 
+    delay_ms: int
 )-> None:
     
     if not state: 
@@ -384,8 +385,11 @@ def set_state(
     if not state_group: 
         raise ValueError("Pass in a non empty state group when setting state.")
     
+    if not isinstance(delay_ms, int) or delay_ms < 0: 
+        raise ValueError("Ensure that delay_ms is an integer and non-negative when setting state.")
+    
     try: 
-        WwisePythonLibrary.set_state(state_group, state)
+        WwisePythonLibrary.set_state(state_group, state, delay_ms)
     
     except Exception: 
         logger.exception("Failed to set state %r in state group %r", state, state_group)
@@ -394,7 +398,8 @@ def set_state(
 def set_switch(
     game_object_name: str, 
     switch_group: str, 
-    switch: str
+    switch: str, 
+    delay_ms: int
 )-> None:
     
     if not switch_group: 
@@ -402,12 +407,15 @@ def set_switch(
     
     if not switch: 
         raise ValueError("Pass in a non empty switch when setting switch.")
+    
+    if not isinstance(delay_ms, int) or delay_ms < 0: 
+        raise ValueError("Ensure that delay_ms is an integer and non-negative when setting switch.")
 
     try:
         if not game_object_name: 
-            WwisePythonLibrary.set_switch(switch_group, switch)
+            WwisePythonLibrary.set_switch(switch_group, switch, delay_ms)
         else : 
-            WwisePythonLibrary.set_switch(switch_group, switch, obj = game_object_name)
+            WwisePythonLibrary.set_switch(switch_group, switch, delay_ms, obj = game_object_name)
     
     except Exception: 
         logger.exception("Failed to set switch %r", switch)
@@ -699,12 +707,12 @@ COMMANDS: dict[str, Command] = {
     "set_state" : Command(
         func=set_state, 
         doc="Sets the state by the state group name it belongs to and the name of the state itself"
-            "Args : state_group : str, state : str, Returns None"
+            "Args : state_group : str, state : str, delay_ms : int, Returns None"
     ), 
     "set_switch" : Command(
         func=set_switch, 
         doc="Sets the switch by the switch group name it belongs to and the name of the switch itself"
-            "Args : start_pos : tuple[float, float, float], switch : str, Returns None"
+            "Args : game_obj_name : str, switch_group: str, switch : str, delay_ms : int, Returns None"
     ),
     "move_game_obj" : Command(
         func=move_game_obj, 

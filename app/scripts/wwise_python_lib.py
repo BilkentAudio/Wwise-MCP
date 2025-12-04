@@ -844,7 +844,9 @@ def create_switch_or_state_types(
 
 def set_state( 
     state_group: str, 
-    state_name: str) -> None:
+    state_name: str, 
+    delay_ms: int
+) -> None:
     
     """
     Sets `state_name` in the specified 'state group' in the wwise project
@@ -853,13 +855,18 @@ def set_state(
     waapi_call("ak.soundengine.setState", {
         "stateGroup": state_group,   
         "state": state_name,
-    })
+        }, 
+        due_in=delay_ms/1000.0,
+        wait=False
+    )
 
 def set_switch( 
     switch_group: str, 
     switch_name: str,
+    delay_ms: int, 
     *,
-    obj: str = "Global") -> None:
+    obj: str = "Global"
+) -> None:
     
     """
     Sets `switch_name` in the specified 'switch_group'
@@ -871,7 +878,10 @@ def set_switch(
         "switchGroup": switch_group,   
         "switchState": switch_name,
         "gameObject" : gid
-    })
+        }, 
+        due_in=delay_ms/1000.0,
+        wait=False
+    )
 
 def set_rtpc( 
     rtpc_name: str,
