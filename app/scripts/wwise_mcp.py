@@ -279,17 +279,16 @@ def rename_objects(
         raise
 
 def import_audio(
-    source: str, 
-    destination: str
+    source_paths: list[str],
+    destination_paths: list[str],
 ) ->list[dict]:
-    
     try:
-        if not source: 
-            raise ValueError("Specify folder path source to import audio from")
-        if not destination:
-            raise ValueError ("No destination parent path defined to import audio to")
+        if not source_paths: 
+            raise ValueError("Specify source_files to import.")
+        if not destination_paths:
+            raise ValueError ("Specify destination_paths to import audio into")
 
-        return WwisePythonLibrary.import_audio(source, destination)
+        return WwisePythonLibrary.import_audio_files(source_paths, destination_paths)
     
     except Exception: 
         logger.exception("Failed to import audio.")
@@ -526,6 +525,27 @@ def list_all_audio_files_at_path_on_file_explorer(root_path:str)->list[str]:
         logger.exception("Failed to retrieve audio at root path %r", root_path)
         raise
 
+def set_object_reference( 
+    object_path: str, 
+    reference_type: str, 
+    reference_path: str
+) -> None:
+    
+    if not object_path or not reference_type: 
+        raise ValueError("Ensure object path and reference name fields are not empty when setting object reference.")
+
+    if reference_path is None:
+        raise ValueError("Value cannot be None.")
+
+    if isinstance(reference_path, str) and not reference_path:
+        raise ValueError("String values cannot be empty.")
+
+    try:
+        WwisePythonLibrary.set_reference(object_path, reference_type, reference_path)
+    except Exception: 
+        logger.exception("Failed to set object reference.")
+        raise
+
 def set_object_property( 
     object_path: str, 
     property_name: str, 
@@ -599,7 +619,7 @@ COMMANDS: dict[str, Command] = {
         doc="Attempts to reconnect to the currently active wwise session."
             "Args: None"
     ),
-    "resolve_all_path_relationships_in_parent" : Command(
+    "resolve_all_path_relationships_in" : Command(
         func=resolve_all_path_relationships_in,
         doc="Returns a path-first index for the subtree rooted at `parent_path`."
             "Args: parent_path. Returns a list[dict]"
@@ -608,7 +628,7 @@ COMMANDS: dict[str, Command] = {
         func=create_child_objects,
         doc="Create child objects given names and types of objects and the parent path, if no parent path(s) specified, function will use prev_response_objects as parents."
             "Args: child_names : list[str], child_types: list[str], parent_paths : list[str] eg. ['\\Actor-Mixer Hierarchy\\Default Work Unit', ...], prev_response_objects='$last' if previous function needs to pass returned values into this function."
-            "Object types : ActorMixer, Bus, AuxBus, RandomSequenceContainer, SwitchContainer, BlendContainer, Sound, WorkUnit, SoundBank, Folder."
+            "Object types : ActorMixer, Bus, AuxBus, RandomSequenceContainer, SwitchContainer, BlendContainer, Sound, WorkUnit, SoundBank, Folder, Attenuation."
     ), 
     "create_events" : Command(
         func=create_events,
@@ -666,8 +686,8 @@ COMMANDS: dict[str, Command] = {
     ), 
     "import_audio_files" : Command(
         func=import_audio, 
-        doc="Imports every audio file or folder under the absolute path defined in source into Wwise under the given parent object or path."
-              "Args: source: str, destination: str. Returns list[dict]"
+        doc="Imports every audio file via its absolute path into the desired Wwise object path (include the object to be imported into the path as well). Validate destination path exists first via resolve_all_path_relationships_in if uncertain."
+            "Args: source_paths: list[str], destination_paths: list[str]. Returns list[dict]"
     ),
     "list_all_event_names" : Command(
         func=list_all_event_names, 
@@ -737,9 +757,9 @@ COMMANDS: dict[str, Command] = {
     ), 
     "generate_soundbanks" : Command(
         func=generate_soundbanks, 
-        doc="Generates the soundbanks given a list of soundbanks names, a list of platforms and a list of languages.\n"
-            "If unsure of what platforms to include, use 'Windows' or call the function : get_project_info.\n"
-            "If unsure on what languages to include, use 'English(US) or call the function : get_project_info.\n" 
+        doc="Generates the soundbanks given a list of soundbanks names, a list of platforms and a list of languages."
+            "If unsure of what platforms to include, use 'Windows' or call the function : get_project_info."
+            "If unsure on what languages to include, use 'English(US) or call the function : get_project_info." 
             "Args: soundbank_names : list[str], platforms : list[str], languages : list[str], Returns None"
     ), 
     "get_project_info" : Command(
@@ -751,6 +771,11 @@ COMMANDS: dict[str, Command] = {
         func=list_all_audio_files_at_path_on_file_explorer, 
         doc="Returns the path to all audio files given the parent folder path on file explorer (eg. 'C:/Audio')"
             "Args: root_path : str. Returns a list[str]"
+    ),
+    "set_object_reference" : Command(
+        func=set_object_reference,
+        doc="Sets a Wwise object's reference (e.g. Attenuation, OutputBus) to a target object."
+            "Args: object_path : str, reference_type : str, reference_path : str. Returns dict."
     ),
     "set_object_property" : Command(
         func=set_object_property,

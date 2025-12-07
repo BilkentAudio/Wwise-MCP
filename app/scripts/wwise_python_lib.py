@@ -1391,21 +1391,50 @@ def rename_objects(
     
     return result
 
+def set_reference(
+    object_path: str,
+    reference_name: str,
+    value: str
+) -> None:
+    """
+    Sets the reference of the object given object's path and value.
+
+    Parameters
+    ----------
+    object_path : str
+        path to the object in Wwise
+    reference_name : str
+        The WAAPI / WAQL reference name - e.g. 'Attenuation'
+    value : str
+       The path to the reference to.
+    """
+    if not object_path: 
+        raise ValueError("You must specify the object paths to set reference for")
+
+    return waapi_call(
+        "ak.wwise.core.object.setReference",
+        {"object": object_path, 
+            "reference": reference_name, 
+            "value": value},
+        options={"return": ["id", "name", "path", "type"]},
+    )
+
 def set_property(
     object_path: str,
     property_name: str,
-    value: int | bool | str) -> None:
+    value: int | bool | str
+) -> None:
     """
-    Sets the property of the object given object's path and .
+    Sets the property of the object given object's path.
 
     Parameters
     ----------
     object_path : str
         path to the object in Wwise
     property_name : str
-        The WAAPI / WAQL property name – e.g. 'IsStreamingEnabled',
+        The WAAPI / WAQL property name - e.g. 'IsStreamingEnabled',
         'IsLoopingEnabled', 'UseGameAuxSends', ...
-    value : int, bool, bool
+    value : int, bool, str
         What to set the property to.
     """
     if not object_path: 
@@ -1479,60 +1508,57 @@ def fetch_nodes(parent_path : str) -> str:
 
 AUDIO_EXTS = {".wav", ".aiff", ".aif", ".ogg"} 
 
-def import_audio(
-    source: str,
-    destination: str,
+def import_audio_files(
+    source_files: list[str],
+    destination_paths: list[str],
     *,
     language: str = "SFX",
     originals_sub: str = "SFX",
-    recurse: bool = True
+    import_operation: str = "useExisting",  # "createNew" / "replaceExisting" also valid
 ) -> list[dict]:
-    
     """
-    Import every audio file under *source* (a folder) into Wwise under the given parent path.
-    • Assumes source is absolute objectPath strings eg. "C:\\Users\\SomeName\\Downloads\\SoundSFX"
-    • Builds absolute object path strings in wwise eg." \\Actor-Mixer Hierarchy\\...\\SoundName"
-    • Returns the WAAPI objects list
+    Import specific audio files into Wwise using WAAPI.
+
+    :param source_files: List of file system paths to audio files.
+    :param destination_paths: List of Wwise object paths (same length as source_files).
+                              e.g. "\\Actor-Mixer Hierarchy\\Default Work Unit\\SFX\\Gun\\Shot_01"
+    :param language: Wwise importLanguage (default "SFX").
+    :param originals_sub: Originals subfolder (e.g. "SFX").
+    :param import_operation: "useExisting", "createNew", or "replaceExisting".
+    :return: List of WAAPI objects returned by the import.
     """
 
-    # --- normalise inputs ---------------------------------------------
-    source = Path(source).expanduser().resolve()
-    if not source.exists():
-        raise FileNotFoundError(source)
+    if len(source_files) != len(destination_paths):
+        raise ValueError("source_files and destination_paths must have the same length")
 
-    # ensure parent path has ONE leading backslash, no trailing
-    destination = "\\" + destination.strip("\\")
+    imports: list[dict] = []
 
-    # --- build import table -------------------------------------------
-    imports = []
-    iterator = source.rglob("*") if recurse else source.iterdir()
+    for src, dest in zip(source_files, destination_paths):
+        # --- normalize & validate source file path ---
+        src_path = Path(src).expanduser().resolve()
+        if not src_path.exists():
+            raise FileNotFoundError(f"Source file does not exist: {src_path}")
 
-    for file in iterator:
-        if file.suffix.lower() not in AUDIO_EXTS:
-            continue
+        if src_path.suffix.lower() not in AUDIO_EXTS:
+            raise ValueError(f"Not a supported audio file: {src_path}")
 
-        # relative folders → keep hierarchy
-        rel_parts = file.relative_to(source).with_suffix("").parts
-        obj_name  = rel_parts[-1]
-        container_path = "\\".join(rel_parts[:-1])           # may be ''
-        pieces = [destination.strip("\\")]
-        if container_path:
-            pieces.append(container_path)
-        pieces.append(obj_name)
+        # --- normalize destination Wwise object path ---
+        # ensure exactly one leading backslash, no trailing backslash
+        object_path = "\\" + dest.strip("\\")
 
-        object_path = "\\" + "\\".join(pieces)               # absolute path
-
-        imports.append({
-            "audioFile": str(file),
-            "objectPath": object_path
-        })
+        imports.append(
+            {
+                "audioFile": str(src_path),
+                "objectPath": object_path,
+            }
+        )
 
     if not imports:
-        raise ValueError("No audio files found under that folder")
+        raise ValueError("No valid audio files provided")
 
-    # --- call WAAPI ----------------------------------------------------
+    # --- WAAPI call ---
     args = {
-        "importOperation": "useExisting",          # or "createNew", "replaceExisting"
+        "importOperation": import_operation,  # "useExisting" / "createNew" / "replaceExisting"
         "default": {
             "importLanguage": language,
             "objectType": "Sound",
@@ -1631,18 +1657,281 @@ Limit Repetition To — RandomAvoidRepeatingCount  (int)
 
 """
 
-CORE_MIXING_PROPERTY_HELP = """
-Core Mixing (on container)
+ATTENUATION_PROPERTY_HELP = """
+Attenuation (WAAPI property names)
 
-Volume — Volume  (dB)
-Pitch — Pitch  (cents)
-Low-pass — Lowpass  (0-100)
-High-pass — Highpass  (0-100)
+Radius Max — RadiusMax
+  • Maximum distance of the attenuation (world units).
+  • Real64, default 100.0, range [1, 100000000].
 
+Cone Use — ConeUse
+  • Enable/disable cone attenuation.
+  • bool.
+
+Cone max attenuation — ConeAttenuation
+  • Additional attenuation applied outside the cone.
+  • Real64 (dB), default -6.0, range [-200, 0].
+
+Cone inner angle — ConeInnerAngle
+  • Inner cone angle in degrees.
+  • int32, default 90, range [0, 360].
+
+Cone outer angle — ConeOuterAngle
+  • Outer cone angle in degrees.
+  • int32, default 245, range [0, 360].
+
+Cone LPF — ConeLowPassFilterValue
+  • Low-pass filter applied outside the cone.
+  • int32, range [0, 100].
+
+Cone HPF — ConeHighPassFilterValue
+  • High-pass filter applied outside the cone.
+  • int32, range [0, 100].
+
+Height Spread — HeightSpreadEnable
+  • Enable height spread behavior.
+  • bool.
+
+OverrideColor - OverrideColor
+  • Set this property to true first or setting Color will not work. 
+  • bool [True, False]
+
+Color — Color
+  • UI color index for the attenuation object. Make sure OverrideColor is set to True first!
+  • int16, default 0, range [0, 26].
+
+RTPC List — RTPC
+  • RTPC list on the attenuation object.
+  • List of RTPC objects; manipulated via ak.wwise.core.object.set / setAttenuationCurve.
+"""
+
+SOUND_PROPERTY_HELP = """
+Sound (WAAPI property names)
+
+--- Positioning / Attenuation ----------------------------------------
+
+3D Position — 3DPosition
+  • 0 = Emitter
+  • 1 = Emitter with Automation
+  • 2 = Listener with Automation
+
+3D Spatialization — 3DSpatialization
+  • 0 = None
+  • 1 = Position
+  • 2 = Position + Orientation
+
+Attenuation (ShareSet / Custom) — Attenuation
+  • Reference to an Attenuation object (ShareSet or custom instance).
+
+Distance Scaling % — AttenuationDistanceScaling
+  • Scale for attenuation distances.
+  • Real32, default 1.0, range [0.01, 100].
+
+Enable Attenuation — EnableAttenuation
+  • Toggle use of attenuation on this Sound.
+  • bool.
+
+Listener Relative Routing — ListenerRelativeRouting
+  • Required to use Attenuation, game/aux sends, etc.
+  • bool.
+
+Hold Emitter Position and Orientation — HoldEmitterPositionOrientation
+  • Lock emitter transform while playing.
+  • bool.
+
+Hold Listener Orientation — HoldListenerOrientation
+  • Lock listener orientation relative to emitter.
+  • bool.
+
+
+--- Core Mixing (per-Sound voice) -----------------------------------
+
+Voice Volume — Volume
+  • dB gain at the voice.
+  • Real64, range [-200, 200].
+
+Voice LPF — Lowpass
+  • Voice low-pass filter.
+  • int16, range [0, 100].
+
+Voice HPF — Highpass
+  • Voice high-pass filter.
+  • int16, range [0, 100].
+
+Make-Up Gain — MakeUpGain
+  • Extra gain used with HDR envelope.
+  • Real64, range [-96, 96].
+
+
+--- Playback / Looping / Limits -------------------------------------
+
+Initial Delay — InitialDelay
+  • Delay before playback (seconds).
+  • Real64, range [0, 3600].
+
+Loop — IsLoopingEnabled
+  • Enable/disable looping.
+  • bool.
+
+Infinite Loop — IsLoopingInfinite
+  • If true, loop indefinitely; otherwise use LoopCount.
+  • bool.
+
+No. of Loops — LoopCount
+  • Number of loops when Infinite is off.
+  • int32, default 2, range [1, 32767].
+
+Virtual Voice Behavior — BelowThresholdBehavior
+  • 0 = Continue to play
+  • 1 = Kill voice
+  • 2 = Send to virtual voice
+  • 3 = Kill if finite else virtual
+
+Limitation Scope — IsGlobalLimit
+  • 0 = Per game object
+  • 1 = Globally
+
+Limit Sound Instances (Enable) — UseMaxSoundPerInstance
+  • Toggle instance limiting.
+  • bool.
+
+Sound Instance Limit — MaxSoundPerInstance
+  • Max simultaneous voices (when limiting enabled).
+  • int16, default 50, range [1, 1000].
+
+When Priority is Equal — MaxReachedBehavior
+  • 0 = Discard oldest instance
+  • 1 = Discard newest instance
+
+On Return to Physical Voice — VirtualVoiceQueueBehavior
+  • 0 = Play from beginning
+  • 1 = Play from elapsed time
+  • 2 = Resume
+
+
+--- Streaming / Voice Behavior --------------------------------------
+
+Stream — IsStreamingEnabled
+  • Use streaming for this source.
+  • bool.
+
+Non-Cachable — IsNonCachable
+  • Prevents caching converted media.
+  • bool.
+
+Zero Latency — IsZeroLatency
+  • Bypass look-ahead / scheduling to minimize latency.
+  • bool.
+
+Is Voice — IsVoice
+  • Mark as a voice (affects certain profiling/mixing behavior).
+  • bool.
+
+
+--- Routing / Busses / Reflections ----------------------------------
+
+Output Bus — OutputBus
+  • Bus reference used by this Sound.
+  • Reference type: Bus.
+
+Early Reflections Aux Send — ReflectionsAuxSend
+  • Aux bus used for early reflections.
+  • Reference type: AuxBus.
+
+Early Reflections Send Volume — ReflectionsVolume
+  • Send level to ReflectionsAuxSend.
+  • Real64, range [-200, 200].
+
+
+--- Aux Sends (Game-defined) ----------------------------------------
+
+Use Game-Defined Auxiliary Sends — UseGameAuxSends
+  • Enable routing to game-defined aux sends.
+  • bool.
+
+Game Aux Sends Volume — GameAuxSendVolume
+  • Master volume for game-defined sends.
+  • Real64, range [-200, 200].
+
+Game Aux Sends LPF — GameAuxSendLPF
+  • Low-pass on game-defined sends.
+  • int16, range [0, 100].
+
+Game Aux Sends HPF — GameAuxSendHPF
+  • High-pass on game-defined sends.
+  • int16, range [0, 100].
+
+
+--- Aux Sends (User-defined 0-3) ------------------------------------
+
+User Aux Send 0-3 — UserAuxSend0..3
+  • Per-slot aux bus references.
+  • Type: AuxBus.
+
+User Aux Volume 0-3 — UserAuxSendVolume0..3
+  • Send volume per aux slot.
+  • Real64, range [-200, 200].
+
+User Aux LPF 0-3 — UserAuxSendLPF0..3
+  • Low-pass per aux slot.
+  • int16, range [0, 100].
+
+User Aux HPF 0-3 — UserAuxSendHPF0..3
+  • High-pass per aux slot.
+  • int16, range [0, 100].
+
+
+--- HDR & Loudness Normalization ------------------------------------
+
+HDR Active Range — HdrActiveRange
+  • HDR window range in dB.
+  • Real64, range [0, 96].
+
+Enable Envelope Tracking — HdrEnableEnvelope
+  • Enables HDR envelope logic.
+  • bool.
+
+HDR Envelope Sensitivity — HdrEnvelopeSensitivity
+  • Sensitivity of HDR envelope.
+  • Real64, range [0, 100].
+
+Enable Loudness Normalization — EnableLoudnessNormalization
+  • Toggle loudness normalization.
+  • bool.
+
+Loudness Normalization Target — LoudnessNormalizationTarget
+  • Target loudness in LUFS.
+  • Real64, default -23, range [-96, 0].
+
+Loudness Normalization Type — LoudnessNormalizationType
+  • 0 = Integrated
+  • 1 = Momentary Max
+
+
+--- Misc -------------------------------------------------------------
+
+Inclusion — Inclusion
+  • Whether this object is included in the SoundBank generation.
+  • bool.
+
+OverrideColor - OverrideColor
+    • Set this property to true first or setting Color will not work. 
+    • bool [True, False]
+
+Color — Color
+  • UI color index for the Sound object. Make sure OverrideColor is set to True first!
+  • int16, range [0, 26].
+
+Weight — Weight
+  • Weight used in containers (Random, Sequence, etc.).
+  • Real64, default 50, range [0.001, 100].
+
+Metadata list — Metadata
+  • List of Metadata objects associated with this Sound.
 """
 
 def get_all_property_name_valid_values() -> str: 
-    return RANDOM_CONTAINER_PROPERTY_HELP + CORE_MIXING_PROPERTY_HELP
+    return RANDOM_CONTAINER_PROPERTY_HELP + ATTENUATION_PROPERTY_HELP + SOUND_PROPERTY_HELP
 
 # ==============================================================================
 #                   Editor Layouts in Wwise
