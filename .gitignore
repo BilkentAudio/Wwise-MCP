@@ -19,6 +19,3 @@ dist/
 # Generated
 .pkg
 .exe
-
-# Icon 
-*.ico
