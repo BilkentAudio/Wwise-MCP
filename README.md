@@ -48,7 +48,7 @@ It is still under active development and should not be used with Wwise projects 
    Use the **“Resolve parent path”** command.  
    This builds an index of objects under a given Wwise path so Claude can cache and navigate your project by paths.
    A good place to begin is one of Wwise’s top-level roots, for example:
-   - `\Actor-Mixer Hierarchy`
+   - `\Actor-Mixer Hierarchy`, `\Containers` (Wwise 2025)
    - `\Events`
    - `\Switches`, `\States`, `\Game Parameters`
   
