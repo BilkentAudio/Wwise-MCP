@@ -20,7 +20,7 @@
     {
          "wwise-mcp":
          {
-           "command": "C:\\Your\\PathTo\\Wwise-MCP.exe", for macOS it will be sth like "/Users/YourPathTo/GitHub/Wwise-MCP/app/scripts/dist/Wwise-MCP"
+           "command": "C:\\Your\\PathTo\\Wwise-MCP.exe",
            "args": []
          }
     }
