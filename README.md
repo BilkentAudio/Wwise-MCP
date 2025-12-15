@@ -88,9 +88,9 @@ It is still under active development and should not be used with Wwise projects 
 - More info can be found [here](https://github.com/BilkentAudio/Wwise-MCP/blob/main/app/README.md)
 
 # ⚠️ macOS Compatability  
-- The current macOS build is Apple Silicon only (arm64)
-- Intel Macs (x86_64) are not supported and will fail with errors like bad CPU type in executable
-- macOS may block the app on first launch due to Gatekeeper or quarantine flags. Ensure macOS settings allow launching apps from external sources
+- Select the Wwise-MCP version that corresponds to your macOS (Apple Silicon arm64, Intel x86_64)
+- macOS may block the app on first launch due to Gatekeeper or quarantine flags
+- Ensure macOS settings allow launching apps from external sources
 
 # License
 Apache 
