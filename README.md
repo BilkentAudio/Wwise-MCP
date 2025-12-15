@@ -43,7 +43,7 @@ It is still under active development and should not be used with Wwise projects 
 - To bypass it, open **Terminal** then run `chmod +x "/Users/YourPathTo/Downloads/Wwise-MCP-v1-0/macOS/Apple Silicon/Wwise-MCP"`
 - Make sure to configure the above command to the path where you store your Wwise-MCP
 - Relaunch your MCP Client (i.e Claude) once more. It will fail again. Navigate to **Privacy & Security** in **System Settings**
-- There should be a `"Wwise-MCP" was blocked to protect your Mac'` message. Select **Allow Anyway**.
+- There should be a `"Wwise-MCP" was blocked to protect your Mac` message. Select **Allow Anyway**.
 - Relaunch your MCP Client (i.e Claude).
 
 # Quickstart
