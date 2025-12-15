@@ -38,6 +38,14 @@ It is still under active development and should not be used with Wwise projects 
 
   https://github.com/user-attachments/assets/98141541-8286-4c1d-98f5-2052364bf4bb
 
+# ⚠️ macOS Security  
+- On macOS, you will most likely face an error on your first launch of Wwise-MCP after setup due to macOS security.
+- To bypass it, open **Terminal** then run chmod +x "/Users/YourPathTo/Downloads/Wwise-MCP-v1-0/macOS/Apple Silicon/Wwise-MCP"
+- Make sure to configure the above command to the path where you store your Wwise-MCP
+- Relaunch your MCP Client (i.e Claude) once more and go to **Privacy & Security** in **Settings**
+- There should be a '"Wwise-MCP" was blocked to protect your Mac' message. Select **Allow Anyway**.
+- Restart your MCP Client (i.e Claude).
+
 # Quickstart
 
 1. **Connect to your Wwise project**  
@@ -86,11 +94,6 @@ It is still under active development and should not be used with Wwise projects 
 - The main entry point is wwise_mcp.py
 - Be sure you are using python version 3.13+
 - More info can be found [here](https://github.com/BilkentAudio/Wwise-MCP/blob/main/app/README.md)
-
-# ⚠️ macOS Compatability  
-- Select the Wwise-MCP version that corresponds to your macOS (Apple Silicon arm64, Intel x86_64)
-- macOS may block the app on first launch due to Gatekeeper or quarantine flags
-- Ensure macOS settings allow launching apps from external sources
 
 # License
 Apache 
