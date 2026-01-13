@@ -4,4 +4,4 @@ This guide covers the Wwise Model Context Protocol (MCP) integration, walking yo
 
 ## Contents
 - [Setup](setup/README.md) - Instructions for setting up Wwise-MCP with MCP Clients (Claude & Cursor)
-- [Tools](tools/README.md) - Overview of all available tools in Wwise-MCP
+- [Tools](tools/ToolList.md) - Overview of all available tools in Wwise-MCP
