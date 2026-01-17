@@ -46,9 +46,8 @@ It is still under active development and should not be used with Wwise projects 
     }
  }
  ```
-- Refer to the [setup page](https://github.com/BilkentAudio/Wwise-MCP/tree/main/docs/setup) for detailed instructions on setting up with [Claude](https://github.com/BilkentAudio/Wwise-MCP/blob/main/docs/setup/Claude/ClaudeSetup.md) and [Cursor](https://github.com/BilkentAudio/Wwise-MCP/blob/main/docs/setup/Cursor/CursorSetup.md)
-
   https://github.com/user-attachments/assets/98141541-8286-4c1d-98f5-2052364bf4bb
+- Refer to the [setup page](https://github.com/BilkentAudio/Wwise-MCP/tree/main/docs/setup) for detailed instructions on setting up with [Claude](https://github.com/BilkentAudio/Wwise-MCP/blob/main/docs/setup/Claude/ClaudeSetup.md) and [Cursor](https://github.com/BilkentAudio/Wwise-MCP/blob/main/docs/setup/Cursor/CursorSetup.md)
 
 # ⚠️ macOS Security Blocker
 - On macOS, you will most likely face an error on your first launch of Wwise-MCP after setup due to macOS security.
