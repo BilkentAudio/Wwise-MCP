@@ -111,10 +111,8 @@ Apache
 
 # Author
 Built by Bilkent Samsurya<br> 
+
 Audio Programmer | AI-integrated Audio Tools | Wwise & Unreal Specialist
-- Creator of Wwise-MCP
-- Focused on AI-driven audio workflows and middleware extensions
-- Open to collaborations and research discussions
 
 [Website](https://bilkentsam.com) •
 [LinkedIn](https://www.linkedin.com/in/bilkentsamsurya) •
