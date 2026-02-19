@@ -116,9 +116,9 @@ Audio Programmer | AI-integrated Audio Tools | Wwise & Unreal Specialist
 - Focused on AI-driven audio workflows and middleware extensions
 - Open to collaborations and research discussions
 
-🔗 Website: https://bilkentsam.com
-🔗 LinkedIn:  https://www.linkedin.com/in/bilkentsamsurya
-🔗 Twitter/X: https://twitter.com/BilkentAudio
+[Website](https://bilkentsam.com) •
+[LinkedIn](https://www.linkedin.com/in/bilkentsamsurya) •
+[Twitter/X](https://twitter.com/BilkentAudio)
 
 # Feedback/Questions
 Feel free to reach out to me at bilkentaudiodev@gmail.com
