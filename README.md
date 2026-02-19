@@ -110,14 +110,14 @@ It is still under active development and should not be used with Wwise projects 
 Apache 
 
 # Author
-Built by Bilkent Samsurya  
+Built by Bilkent Samsurya<br> 
 Audio Programmer | AI-integrated Audio Tools | Wwise & Unreal Specialist
 - Creator of Wwise-MCP
 - Focused on AI-driven audio workflows and middleware extensions
 - Open to collaborations and research discussions
 
-🔗 Website: bilkentsam.com
-🔗 LinkedIn:  www.linkedin.com/in/bilkentsamsurya
+🔗 Website: bilkentsam.com<br>
+🔗 LinkedIn:  www.linkedin.com/in/bilkentsamsurya<br>
 🔗 Twitter/X: @BilkentAudio
 
 # Feedback/Questions
