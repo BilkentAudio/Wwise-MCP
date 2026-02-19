@@ -110,7 +110,7 @@ It is still under active development and should not be used with Wwise projects 
 Apache 
 
 # Author
-Built by Bilkent Samsurya
+Built by Bilkent Samsurya  
 Audio Programmer | AI-integrated Audio Tools | Wwise & Unreal Specialist
 - Creator of Wwise-MCP
 - Focused on AI-driven audio workflows and middleware extensions
