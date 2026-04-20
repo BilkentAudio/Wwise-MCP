@@ -2,7 +2,7 @@
   <img src="images/wwise_mcp_banner.png" width="100%" />
 </p>
   
-# Model Context Protocol for Wwise
+# Wwise-MCP (Model Context Protocol for Wwise)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Wwise](https://img.shields.io/badge/Wwise%20-2024.1%2B-blue.svg)](https://www.audiokinetic.com/en/wwise/)
