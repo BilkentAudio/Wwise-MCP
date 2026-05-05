@@ -1446,6 +1446,40 @@ def set_property(
             "property": property_name, 
             "value": value})
 
+def set_randomizer(
+    object_path: str, 
+    property_name: str, 
+    enabled: bool, 
+    min_value: float, 
+    max_value: float
+) -> None:
+    """
+    Sets the randomizer for a given property on a Wwise object.
+    Example property_name: "Volume", "Pitch", "Lowpass"
+    """
+
+    waapi_call("ak.wwise.core.object.setRandomizer", {
+        "object": object_path,
+        "property": property_name,
+        "enabled": enabled,
+        "min": min_value,
+        "max": max_value
+    })
+        
+def assign_child_to_switch(
+    child_container_path: str,
+    switch_path: str
+) -> None:
+    """
+    Assigns a child object (e.g., Random Container) to a specific Switch within a Switch Container.
+    Example: assign a "Grass" random container to the "Surface/Grass" switch.
+    """
+
+    waapi_call("ak.wwise.core.switchContainer.addAssignment", {
+        "child": child_container_path,
+        "stateOrSwitch": switch_path
+    })
+
 def move_object_by_path(source_path: str, dst_path: str):
     """
     Move an object (by its path) to a new parent (by path).

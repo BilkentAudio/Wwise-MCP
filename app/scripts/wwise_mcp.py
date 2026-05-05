@@ -566,7 +566,32 @@ def set_object_property(
     except Exception: 
         logger.exception("Failed to set object property.")
         raise
+
+def set_object_randomizer(
+    object_path: str,
+    property_name: str,
+    enabled: bool,
+    min_value: float,
+    max_value: float
+) -> None:
     
+    try:
+        WwisePythonLibrary.set_randomizer(object_path, property_name, enabled, min_value, max_value); 
+    except Exception:
+        logger.exception("Failed to randomize object property.")
+        raise
+
+def assign_child_to_switch(
+    child_container_path: str,
+    switch_path: str
+) -> None:
+    
+    try:
+        WwisePythonLibrary.assign_child_to_switch(child_container_path, switch_path)
+    except Exception:
+        logger.exception("Failed to assign child to switch.")
+        raise
+
 def get_selected_objects() -> list[dict]:
     try: 
         selected_objects = WwisePythonLibrary.get_selected_objects()
@@ -781,6 +806,16 @@ COMMANDS: dict[str, Command] = {
         func=set_object_property,
         doc="Sets the property of the object to a new value given its path in wwise"
             "Args: object_path : str, property_name : str, value: int | bool | str. Returns dict."
+    ),
+    "set_object_randomizer" : Command(
+        func=set_object_randomizer,
+        doc="Sets the randomizer for a given property on a Wwise object."
+            "Args: object_path: str, property_name: str, enabled: bool, min_value: float, max_value: float. Return dict"
+    ),
+   "assign_switch_container_child" : Command(
+        func=assign_child_to_switch,
+        doc="Assigns a child object (e.g., Random Container) to a specific Switch within a Switch Container."
+            "Args: child_container_path: str, switch_path: str. Return dict"
     ),
     "retrieve_selected_objs" : Command(
         func=get_selected_objects, 
