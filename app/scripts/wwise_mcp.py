@@ -278,6 +278,39 @@ def rename_objects(
         logger.exception("Failed to rename objects.")
         raise
 
+def get_objects_info(
+    object_paths: list[str], 
+    return_fields: list[str]
+) -> dict:
+    try:
+        if not object_paths:
+            raise ValueError("Specify an object path when getting objects info")
+        if not return_fields:
+            raise ValueError("Specify return fields when getting object info")
+        
+        return WwisePythonLibrary.get_objects_info(object_paths, return_fields)
+
+    except Exception: 
+        logger.exception("Failed to get object info")
+        raise
+
+def get_property_and_reference_names(
+    object_path: str
+) -> dict:
+    try:
+        if not object_path:
+            raise ValueError(
+                "Specify an object path when retrieving valid properties and references."
+            )
+
+        return WwisePythonLibrary.get_object_property_and_reference_names(object_path)
+
+    except Exception:
+        logger.exception(
+            "Failed to retrieve valid property and reference names."
+        )
+        raise
+
 def import_audio(
     source_paths: list[str],
     destination_paths: list[str],
@@ -716,6 +749,24 @@ COMMANDS: dict[str, Command] = {
         doc ="Renames a list of objects either by passing in a list of the objects' paths or by include prev_response_objects='$last' if a previous function need to pass returned values into this function."
              "Args: paths_of_objects_to_rename : list[str] | None, prev_response_objects: list[dict] | None, names: list[str]. Returns list[str]"
     ), 
+    "get_objects_info": Command(
+        func=get_objects_info,
+        doc ="Retrieves detailed information about Wwise objects by passing in their paths."
+             "Custom WAAPI return fields must be specified via return_fields."
+             "Built-in return fields include examples such as: 'id', 'name', 'type', 'path', 'parent', 'children', 'notes'. "
+             "Wwise properties and references can also be queried using the '@' and '@@' syntax. "
+             "'@PropertyName' retrieves the value directly authored on the object itself. "
+             "'@@PropertyName' retrieves the fully resolved value after inheritance/override resolution. "
+             "Examples of valid '@' fields include: '@Volume', '@Pitch', '@Lowpass', '@Highpass', '@OutputBus', '@Attenuation', '@Effect0', '@UserAuxSend0'. "
+             "Example: if a RandomContainer inherits its OutputBus from its parent ActorMixer, '@OutputBus' may be empty while '@@OutputBus' returns the inherited resolved bus. "
+             "Args: object_paths : list[str], return_fields : list[str]. Returns dict."
+    ), 
+    "get_property_and_reference_names": Command(
+        func=get_property_and_reference_names,
+        doc ="Retrieves all valid WAAPI properties and references available for a Wwise object. "
+            "Useful for determining which '@Property' and '@@Property' fields may be queried or set on the object."
+            "Args: object_path : str. Returns dict."
+    ),
     "import_audio_files" : Command(
         func=import_audio, 
         doc="Imports every audio file via its absolute path into the desired Wwise object path (include the object to be imported into the path as well). Validate destination path exists first via resolve_all_path_relationships_in if uncertain."

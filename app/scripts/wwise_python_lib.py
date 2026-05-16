@@ -1319,6 +1319,54 @@ def get_object_at_path(path: str) -> dict:
             }
         )
 
+def get_objects_info(object_paths: list[str], return_fields: list[str]) -> dict:
+    """
+    Gets detailed information about a Wwise object by path, GUID, or qualified name.
+
+    Args:
+        object_ref: Wwise object path, GUID, or qualified name.
+        return_fields: WAAPI return fields.
+
+    Returns:
+        dict containing the WAAPI response.
+    """
+
+    args = {
+        "from": {
+            "path": object_paths
+        },
+        "options": {
+            "return": return_fields
+        }
+    }
+
+    return waapi_call("ak.wwise.core.object.get", args)
+
+def get_object_property_and_reference_names(object_path: str) -> dict:
+    """
+    Gets all valid WAAPI property and reference names for a Wwise object.
+
+    This is useful for determining which '@Property' and '@@Property'
+    fields may be queried or set on the specified object.
+
+    Args:
+        object_path: Wwise object path.
+                     Example:
+                     '\\Actor-Mixer Hierarchy\\Default Work Unit\\MyBlendContainer'
+
+    Returns:
+        dict containing valid properties and references for the object.
+    """
+
+    args = {
+        "object": object_path
+    }
+
+    return waapi_call(
+        "ak.wwise.core.object.getPropertyAndReferenceNames",
+        args
+    )
+
 # ==============================================================================
 #                   Editing Objects in Wwise 
 # ==============================================================================
