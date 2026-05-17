@@ -1760,6 +1760,132 @@ def delete_object(object_ref: str) -> dict:
                 "object_ref": object_ref
             }
         )
+    
+# ==============================================================================
+#                           Undo & Transaction
+# ==============================================================================
+
+def begin_undo_group() -> dict:
+    """
+    Opens a new undo group in Wwise. All subsequent authoring operations
+    will be grouped together and can be rolled back atomically.
+
+    Returns the WAAPI response dict.
+    """
+    try:
+        response = waapi_call("ak.wwise.core.undo.beginGroup", {})
+
+        if response is None:
+            raise WwiseApiError(
+                "WAAPI returned None when opening undo group",
+                operation="ak.wwise.core.undo.beginGroup",
+                details={}
+            )
+
+        return response
+
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Unexpected error opening undo group: {str(e)}",
+            operation="ak.wwise.core.undo.beginGroup",
+            details={"error_type": type(e).__name__}
+        )
+
+
+def end_undo_group(display_name: str) -> dict:
+    """
+    Closes the current undo group in Wwise, committing all grouped operations.
+
+    Args:
+        display_name (str) - Label shown in the Wwise undo history.
+
+    Returns the WAAPI response dict.
+    """
+    if not display_name or not isinstance(display_name, str) or not display_name.strip():
+        raise WwiseValidationError("display_name must be a non-empty string.")
+
+    try:
+        response = waapi_call("ak.wwise.core.undo.endGroup", {
+            "displayName": display_name.strip()
+        })
+
+        if response is None:
+            raise WwiseApiError(
+                "WAAPI returned None when closing undo group",
+                operation="ak.wwise.core.undo.endGroup",
+                details={"display_name": display_name}
+            )
+
+        return response
+
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Unexpected error closing undo group: {str(e)}",
+            operation="ak.wwise.core.undo.endGroup",
+            details={
+                "error_type": type(e).__name__,
+                "display_name": display_name
+            }
+        )
+
+
+def cancel_undo_group() -> dict:
+    """
+    Cancels the current undo group
+
+    Returns the WAAPI response dict.
+    """
+    try:
+        response = waapi_call("ak.wwise.core.undo.cancelGroup", {})
+
+        if response is None:
+            raise WwiseApiError(
+                "WAAPI returned None when cancelling undo group",
+                operation="ak.wwise.core.undo.cancelGroup",
+                details={}
+            )
+
+        return response
+
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Unexpected error cancelling undo group: {str(e)}",
+            operation="ak.wwise.core.undo.cancelGroup",
+            details={"error_type": type(e).__name__}
+        )
+
+def undo() -> dict:
+    """
+    Undoes the last operation in Wwise, equivalent to pressing Ctrl+Z.
+
+    Returns the WAAPI response dict.
+    """
+    try:
+        response = waapi_call("ak.wwise.core.undo.undo", {})
+
+        if response is None:
+            raise WwiseApiError(
+                "WAAPI returned None when undoing operation",
+                operation="ak.wwise.core.undo.undo",
+                details={}
+            )
+
+        return response
+
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Unexpected error undoing operation: {str(e)}",
+            operation="ak.wwise.core.undo.undo",
+            details={"error_type": type(e).__name__}
+        )
 
 # ==============================================================================
 #           Property Names & Valid Ranges for different Wwise Objects

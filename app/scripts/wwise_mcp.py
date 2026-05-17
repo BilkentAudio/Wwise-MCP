@@ -900,7 +900,24 @@ COMMANDS: dict[str, Command] = {
         func=delete_object,
         doc="Deletes a Wwise object by GUID, path, or qualified name. "
             "Args: object_ref (str) - Object GUID, object path, or qualified object name."
-    )
+    ),
+    "begin_undo_group": Command(
+        func=WwisePythonLibrary.begin_undo_group,
+        doc="Opens a new undo group in Wwise. All subsequent authoring operations "
+            "will be grouped together and can be rolled back atomically. "
+            "No args required."
+    ),
+    "end_undo_group": Command(
+        func=WwisePythonLibrary.end_undo_group,
+        doc="Closes the current undo group in Wwise, committing all grouped operations. "
+            "Args: display_name (str) - Label shown in the Wwise undo history."
+    ),
+    "undo": Command(
+        func=WwisePythonLibrary.undo,
+        doc="Undoes the last operation in Wwise, equivalent to Ctrl+Z. "
+            "Use after a failed plan to revert all operations performed "
+            "since begin_undo_group was called. No args required."
+),
 }
 
 def list_commands()-> list[str]: 
@@ -954,40 +971,53 @@ def _resolve(val, store):
         return {k: _resolve(v, store) for k, v in val.items()}
     return val
 
+class PlanExecutionError(Exception):
+    def __init__(self, original: Exception, log: list[dict[str, any]], failed_step: any):
+        super().__init__(str(original))
+        self.original    = original
+        self.log         = log
+        self.failed_step = failed_step
+
+
 def _run_plan_sync(plan: list[any]) -> list[dict[str, any]]:
-    store: dict[str, any] = {}        # per-plan variable bucket
+    store: dict[str, any] = {}
     log  : list[dict[str, any]] = []
 
     for step in plan:
-        #   Legacy string mode 
-        if isinstance(step, str):
-            verb, args, kwargs = _parse_call(step)
-            args   = _resolve(args, store)      # allow $var inside lists
-            kwargs = _resolve(kwargs, store)
-            save_as = None                      # no explicit name in legacy
-        #   Dict style  
-        else:
-            verb   = step["command"]
-            args   = []                         # dict style uses keywords
-            kwargs = _resolve(step["args"], store)
-            save_as = step.get("save_as")
+        try:
+            # Legacy string mode
+            if isinstance(step, str):
+                verb, args, kwargs = _parse_call(step)
+                args   = _resolve(args, store)
+                kwargs = _resolve(kwargs, store)
+                save_as = None
+            # Dict style
+            else:
+                verb   = step["command"]
+                args   = []
+                kwargs = _resolve(step["args"], store)
+                save_as = step.get("save_as")
 
-        #   Execute & validate 
-        if verb not in COMMANDS:
-            raise ValueError(f"Unknown command '{verb}'")
-        func = COMMANDS[verb].func
-        inspect.signature(func).bind_partial(*args, **kwargs)
-        result = func(*args, **kwargs)
+            # Execute & validate
+            if verb not in COMMANDS:
+                raise ValueError(f"Unknown command '{verb}'")
+            func = COMMANDS[verb].func
+            inspect.signature(func).bind_partial(*args, **kwargs)
+            result = func(*args, **kwargs)
 
-        #   Store results 
-        store["last"] = result
-        if save_as:
-            store[save_as] = result
+            # Store results
+            store["last"] = result
+            if save_as:
+                store[save_as] = result
 
-        log.append(
-            {"command": verb, 
-             "kwargs": kwargs,
-             "result": result})
+            log.append({
+                "command": verb,
+                "kwargs":  kwargs,
+                "result":  result
+            })
+
+        except Exception as e:
+            raise PlanExecutionError(e, log, step) from e
 
     return log
 
@@ -997,7 +1027,7 @@ def _run_plan_sync(plan: list[any]) -> list[dict[str, any]]:
 
 mcp = FastMCP(
     name = "Wwise-MCP Server",
-    version = "1.0"
+    version = "1.1"
 )
 
 @mcp.tool()
@@ -1011,16 +1041,58 @@ async def list_wwise_commands()-> list[str]:
     return list_commands()
 
 @mcp.tool()
-async def execute_plan( plan: list[str]) -> dict [str, any]:
-
+async def execute_plan(plan: list[str]) -> dict[str, any]:
     """
     Execute a JSON list of call-strings produced by Claude.
     Returns simple success/failure info.
     """
-    
-    log = await anyio.to_thread.run_sync(_run_plan_sync, plan)
 
-    return {"status": "ok", "steps_executed": len(log), "log": log}
+    # Inject undo group wrapping around authoring steps
+    if plan and "connect_to_wwise" in plan[0]:
+        injected = (
+            [plan[0]]
+            + ["begin_undo_group()"]
+            + plan[1:]
+            + ["end_undo_group('Wwise-MCP Execute Plan')"]
+        )
+    else:
+        injected = (
+            ["begin_undo_group()"]
+            + plan
+            + ["end_undo_group('Wwise-MCP Execute Plan')"]
+        )
+
+    try:
+        log = await anyio.to_thread.run_sync(_run_plan_sync, injected)
+        return {"status": "ok", "steps_executed": len(log), "log": log}
+
+    except PlanExecutionError as pe:
+        logger.exception("Plan failed mid-execution.")
+
+        # Close the undo group cleanly so anything that DID succeed is grouped
+        # into a single undo step in Wwise's history (user can Ctrl+Z it if desired)
+        try:
+            await anyio.to_thread.run_sync(
+                _run_plan_sync,
+                ["end_undo_group('Wwise-MCP Partial Plan')"]
+            )
+        except Exception:
+            logger.exception("Failed to close undo group after partial plan.")
+
+        return {
+            "status": "error",
+            "error": str(pe.original),
+            "failed_step": pe.failed_step,
+            "succeeded_steps": pe.log
+        }
+
+    except Exception as e:
+        # Fallback for anything outside the wrapped loop
+        logger.exception("Unexpected execute_plan failure.")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 # Run the server
 if __name__ == "__main__":
