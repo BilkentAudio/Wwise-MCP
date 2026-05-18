@@ -614,6 +614,20 @@ def set_object_randomizer(
         logger.exception("Failed to randomize object property.")
         raise
 
+def set_attenuation_curve(
+    object_path: str,
+    curve_type: str,
+    use: str,
+    points: list[dict] | None,
+    platform: str = "Windows"
+) -> None:
+    
+    try:
+        WwisePythonLibrary.set_attenuation_curve(object_path, curve_type, use, points, platform)
+    except Exception:
+        logger.exception("Failed to set attenuation curve.")
+        raise
+
 def assign_child_to_switch(
     child_container_path: str,
     switch_path: str
@@ -869,6 +883,21 @@ COMMANDS: dict[str, Command] = {
         func=set_object_randomizer,
         doc="Sets the randomizer for a given property on a Wwise object."
             "Args: object_path: str, property_name: str, enabled: bool, min_value: float, max_value: float. Return dict"
+    ),
+    "set_attenuation_curve": Command(
+        func=set_attenuation_curve,
+        doc="Sets an attenuation curve on a Wwise Attenuation object. "
+            "Args: object_path: str, curve_type: str ('VolumeDryUsage' | 'VolumeWetGameUsage' | 'VolumeWetUserUsage' | "
+            "'LowPassFilterUsage' | 'HighPassFilterUsage' | 'HighShelfUsage' | 'SpreadUsage' | 'FocusUsage' | "
+            "'ObstructionVolumeUsage' | 'ObstructionLPFUsage' | 'ObstructionHPFUsage' | 'ObstructionHSFUsage' | "
+            "'OcclusionVolumeUsage' | 'OcclusionLPFUsage' | 'OcclusionHPFUsage' | 'OcclusionHSFUsage' | "
+            "'DiffractionVolumeUsage' | 'DiffractionLPFUsage' | 'DiffractionHPFUsage' | 'DiffractionHSFUsage' | "
+            "'TransmissionVolumeUsage' | 'TransmissionLPFUsage' | 'TransmissionHPFUsage' | 'TransmissionHSFUsage'), "
+            "use: str ('Custom' | 'None' | 'UseVolumeDry' | 'UseProject'), "
+            "points: list[dict] | None (each dict: {'x': float, 'y': float, 'shape': str} where shape: "
+            "'Constant' | 'Linear' | 'Log3' | 'Log2' | 'Log1' | 'InvertedSCurve' | 'SCurve' | 'Exp1' | 'Exp2' | 'Exp3'; "
+            "x must start at 0.0 and end at the attenuation's RadiusMax; RadiusMax must be set before calling this function), "
+            "platform: str (default 'Windows'). Returns None."
     ),
    "assign_switch_container_child" : Command(
         func=assign_child_to_switch,

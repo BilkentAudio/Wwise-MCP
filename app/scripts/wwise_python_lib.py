@@ -1514,6 +1514,57 @@ def set_randomizer(
         "min": min_value,
         "max": max_value
     })
+
+def set_attenuation_curve(
+    object_path: str,
+    curve_type: str,
+    use: str,
+    points: list[dict] | None,
+    platform: str = "Windows"
+) -> None:
+    """
+    Sets an attenuation curve on a Wwise Attenuation object.
+
+    Args:
+        object_path: The ID (GUID), name, or path of the attenuation object.
+                     Accepts project path, qualified name (Attenuation:Name), or GUID.
+
+        curve_type: The type of attenuation curve. One of:
+                    "VolumeDryUsage" | "VolumeWetGameUsage" | "VolumeWetUserUsage" |
+                    "LowPassFilterUsage" | "HighPassFilterUsage" | "HighShelfUsage" |
+                    "SpreadUsage" | "FocusUsage" |
+                    "ObstructionVolumeUsage" | "ObstructionLPFUsage" | "ObstructionHPFUsage" | "ObstructionHSFUsage" |
+                    "OcclusionVolumeUsage"   | "OcclusionLPFUsage"   | "OcclusionHPFUsage"   | "OcclusionHSFUsage"  |
+                    "DiffractionVolumeUsage" | "DiffractionLPFUsage" | "DiffractionHPFUsage" | "DiffractionHSFUsage"|
+                    "TransmissionVolumeUsage"| "TransmissionLPFUsage"| "TransmissionHPFUsage"| "TransmissionHSFUsage"
+
+        use: "None"         - Curve disabled, no points.
+             "Custom"       - Curve uses its own points (points arg required).
+             "UseVolumeDry" - Curve mirrors the VolumeDryUsage curve.
+             "UseProject"   - Curve uses the global curve from Project Settings.
+
+        points: list of {"x": float, "y": float, "shape": str} — required when use="Custom".
+                First point x MUST be 0.0, last point x MUST equal the attenuation's RadiusMax.
+                RadiusMax MUST be set on the object before calling this function.
+                shape: "Constant" | "Linear" |
+                       "Log3" | "Log2" | "Log1" |
+                       "InvertedSCurve" | "SCurve" |
+                       "Exp1" | "Exp2" | "Exp3"
+
+        platform: Unique name or GUID of the target platform. Defaults to "Windows".
+                  Pass the null GUID "{00000000-0000-0000-0000-000000000000}" for an unlinked curve.
+                  Do NOT pass "{CurrentPlatform}" — it is not a valid WAAPI value.
+    """
+
+    args = {
+        "object": object_path,
+        "platform": platform,
+        "curveType": curve_type,
+        "use": use,
+        "points": points or []
+    }
+
+    waapi_call("ak.wwise.core.object.setAttenuationCurve", args)
         
 def assign_child_to_switch(
     child_container_path: str,
