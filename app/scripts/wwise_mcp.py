@@ -90,7 +90,46 @@ def create_child_objects(
     except Exception: 
         logger.exception("Failed to create objects.")
         raise 
-    
+
+def create_blend_tracks(
+    blend_container_paths: list[str],
+    blend_track_names: list[str],
+) -> list[dict]:
+
+    if len(blend_container_paths) != len(blend_track_names):
+        raise ValueError(
+            f"Mismatched lengths: {len(blend_container_paths)} container path(s) "
+            f"but {len(blend_track_names)} track name(s)."
+        )
+
+    objects = [
+        WwisePythonLibrary.get_object_at_path(path)
+        for path in blend_container_paths
+    ]
+
+    if not objects:
+        raise ValueError("blend_container_paths is empty.")
+
+    try:
+        blend_container_ids = [obj["id"] for obj in objects]
+    except (KeyError, TypeError) as e:
+        raise ValueError("One or more Blend Container objects are missing an 'id' field.") from e
+
+    try:
+        result: list[dict] = []
+        for blend_container_id, blend_track_name in zip(blend_container_ids, blend_track_names):
+            result.append(
+                WwisePythonLibrary.create_blend_track(
+                    blend_container_id,
+                    blend_track_name
+                )
+            )
+        return result
+
+    except Exception:
+        logger.exception("Failed to create blend tracks.")
+        raise
+
 def create_events(
     source_paths: list[str], 
     dst_parent_paths: list[str], 
@@ -639,6 +678,22 @@ def assign_child_to_switch(
         logger.exception("Failed to assign child to switch.")
         raise
 
+def assign_child_to_blend_track(
+    blend_track_id: str,
+    child_path: str,
+    edges: list[dict] | None = None
+) -> None:
+
+    try:
+        WwisePythonLibrary.assign_child_to_blend_track(
+            blend_track_id,
+            child_path,
+            edges
+        )
+    except Exception:
+        logger.exception("Failed to assign child to blend track.")
+        raise
+
 def get_selected_objects() -> list[dict]:
     try: 
         selected_objects = WwisePythonLibrary.get_selected_objects()
@@ -709,6 +764,14 @@ COMMANDS: dict[str, Command] = {
             "Args: child_names : list[str], child_types: list[str], parent_paths : list[str] eg. ['\\Actor-Mixer Hierarchy\\Default Work Unit', ...], prev_response_objects='$last' if previous function needs to pass returned values into this function."
             "Object types : ActorMixer, PropertyContainer, Bus, AuxBus, RandomSequenceContainer, SwitchContainer, MusicSwitchContainer,BlendContainer, Sound, WorkUnit, SoundBank, Folder, Attenuation, MusicPlaylistContainer, MusicSegment."
     ), 
+    "create_blend_tracks" : Command(
+        func=create_blend_tracks,
+        doc="Creates Blend Tracks inside Blend Containers."
+            "Args: blend_container_paths: list[str], blend_track_names: list[str], "
+            "prev_response_objects='$last' if previous function needs to pass returned values into this function. "
+            "Note: this only creates the Blend Track object itself and does not assign a crossfade RTPC/Game Parameter. "
+            "Returns a list of created Blend Track objects."
+    ),
     "create_events" : Command(
         func=create_events,
         doc="Create multiple Wwise events in one batch."
@@ -903,6 +966,18 @@ COMMANDS: dict[str, Command] = {
         func=assign_child_to_switch,
         doc="Assigns a child object (e.g., Random Container) to a specific Switch within a Switch Container."
             "Args: child_container_path: str, switch_path: str. Return dict"
+    ),
+    "assign_blend_track_child": Command(
+        func=assign_child_to_blend_track,
+        doc="Assigns a child object (e.g., Sound or Random Container) to an existing Blend Track. "
+            "Optionally configure crossfade edge positions and curve shapes via the edges parameter. "
+            "Each edges list must contain exactly two dicts (left and right edge), each with: "
+            "fadeMode (None | Manual | Automatic), fadeShape (Linear | SCurve | Log1 | Log2 | Log3 | Exp1 | Exp2 | Exp3 | Constant | InvertedSCurve), "
+            "edgePosition (float, within the RTPC range), and fadePosition (float, Manual mode only). "
+            "Note: BlendTrack is not path-addressable; use the GUID returned by create_blend_tracks. "
+            "To enable crossfade: set property 'EnableCrossFading'=True and set reference "
+            "'LayerCrossFadeControlInput' to the target Game Parameter via set_object_reference. "
+            "Args: blend_track_id: str, child_path: str, edges: list[dict] | None. Returns None."
     ),
     "retrieve_selected_objs" : Command(
         func=get_selected_objects, 

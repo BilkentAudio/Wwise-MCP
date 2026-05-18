@@ -1580,6 +1580,25 @@ def assign_child_to_switch(
         "stateOrSwitch": switch_path
     })
 
+def assign_child_to_blend_track(
+    blend_track_id: str,
+    child_path: str,
+    edges: list[dict] | None = None
+) -> dict:
+
+    if not blend_track_id:
+        raise ValueError("blend_track_id must be a valid Wwise object GUID.")
+
+    args = {
+        "object": blend_track_id,
+        "child": child_path
+    }
+
+    if edges is not None:
+        args["edges"] = edges
+
+    return waapi_call("ak.wwise.core.blendContainer.addAssignment", args)
+
 def move_object_by_path(source_path: str, dst_path: str):
     """
     Move an object (by its path) to a new parent (by path).
@@ -1767,6 +1786,19 @@ def create_object(
     
     except Exception as e:
         raise RuntimeError(f"WAAPI error: {e}")
+
+def create_blend_track(
+    blend_container_path: str,
+    blend_track_name: str
+) -> dict:
+    """
+    Creates a Blend Track inside a Blend Container.
+    """
+
+    return waapi_call("ak.wwise.core.blendContainer.addTrack", {
+        "object": blend_container_path,
+        "name": blend_track_name
+    })
 
 # ==============================================================================
 #                   Deleting Objects in Wwise
