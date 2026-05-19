@@ -283,6 +283,31 @@ def move_object_by_path(
         logger.exception("Failed to move object from %r to %r", source_path, destination_parent_path)
         raise
 
+def copy_objects(
+    source_paths: list[str],
+    destination_parent_path: str,
+    on_name_conflict: str = "rename"
+) -> list[dict]:
+
+    if not source_paths:
+        raise ValueError("Pass in a non-empty source_paths for 'copy_object'.")
+
+    if not destination_parent_path:
+        raise ValueError("Pass in a non empty destination_parent_path for 'copy_object'.")
+
+    if on_name_conflict not in ("rename", "replace", "fail"):
+        raise ValueError(f"Invalid on_name_conflict value: {on_name_conflict!r}. Must be 'rename', 'replace', or 'fail'.")
+
+    try:
+        return [
+            WwisePythonLibrary.copy_object(source_path, destination_parent_path, on_name_conflict)
+            for source_path in source_paths
+        ]
+
+    except Exception:
+        logger.exception("Failed to copy objects %r to %r", source_paths, destination_parent_path)
+        raise
+
 def rename_objects(
     paths_of_objects_to_rename: list[str] | None, 
     prev_response_objects: list[any] | None, 
@@ -835,6 +860,12 @@ COMMANDS: dict[str, Command] = {
         doc="Moves the object from the source path to the new destination parent path. All child objects will be moved along with the parent."
             "Args: source_path : str, destination_parent_path : str, Returns a dict"
     ), 
+    "copy_objects": Command(
+        func=copy_objects,
+        doc="Copies one or more objects to a single destination parent path. All child objects are copied along with each parent. "
+            "on_name_conflict: 'rename' (default) | 'replace' | 'fail'. "
+            "Args: source_paths: list[str], destination_parent_path: str, on_name_conflict: str, Returns list[dict]"
+    ),
     "rename_objects" : Command(
         func=rename_objects, 
         doc ="Renames a list of objects either by passing in a list of the objects' paths or by include prev_response_objects='$last' if a previous function need to pass returned values into this function."

@@ -1663,6 +1663,41 @@ def move_object_by_path(source_path: str, dst_path: str):
 
     return moved
 
+def copy_object(source_path: str, dst_parent_path: str, on_name_conflict: str = "rename"):
+    """
+    Copy an object (by path) to a new parent (by path).
+    on_name_conflict: "rename" | "replace" | "fail"
+    Returns the WAAPI result dict (id, name, path) of the new copy.
+    """
+
+    src_obj = get_object_at_path(source_path)
+    if not src_obj:
+        raise ValueError(f"Source path not found: {source_path}")
+    src_id = src_obj["id"]
+
+    dst_obj = get_object_at_path(dst_parent_path)
+    if not dst_obj:
+        raise ValueError(f"Destination path not found: {dst_parent_path}")
+    dst_id = dst_obj["id"]
+
+    res = waapi_call("ak.wwise.core.object.copy", args={
+        "object": src_id,
+        "parent": dst_id,
+        "onNameConflict": on_name_conflict,
+    })
+
+    if not isinstance(res, dict):
+        raise RuntimeError(f"Copy failed: {res}")
+
+    copied_id = res["id"]
+    copied = waapi_call(
+        "ak.wwise.core.object.get",
+        args={"from": {"id": [copied_id]}},
+        options={"options": {"return": ["id", "name", "path"]}},
+    )
+
+    return copied
+
 # ==============================================================================
 #           Resolving Path Structures in Wwise
 # ==============================================================================
