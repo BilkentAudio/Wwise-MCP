@@ -559,8 +559,9 @@ def stop_all_sounds() -> None:
         raise
         
 def include_in_soundbank(
-    include_paths: list[str], 
-    soundbank_path: str
+    include_paths: list[str],
+    soundbank_path: str,
+    filter: list[str] | None = None,
 ) -> list[dict]: 
     
     if not include_paths: 
@@ -574,7 +575,7 @@ def include_in_soundbank(
         raise ValueError("Pass in a non empty soundbank path.")
 
     try: 
-        return WwisePythonLibrary.include_in_soundbank(include_paths, soundbank_path)
+        return WwisePythonLibrary.include_in_soundbank(include_paths, soundbank_path, filter)
     except Exception: 
         logger.exception("Failed to include %r paths in soundbank %r", len(include_paths), soundbank_path)
         raise

@@ -211,9 +211,12 @@ def get_all_soundbanks() -> list[str]:
             }
         )
 
+_SETINCLUSIONS_FILTER_VALUES = frozenset({"events", "structures", "media"})
+
 def include_in_soundbank(
-    include_paths: list[str], 
-    soundbank_path: str
+    include_paths: list[str],
+    soundbank_path: str,
+    filter: list[str] | None = None,
 ) -> list[dict]:
     """
     Add objects to a SoundBank's inclusions list.
@@ -239,6 +242,16 @@ def include_in_soundbank(
     if not soundbank_path or not soundbank_path.strip():
         raise WwiseValidationError("soundbank_path cannot be empty")
     
+    if filter is None:
+        effective_filter = ["events", "structures"]
+    else:
+        bad = [f for f in filter if f not in _SETINCLUSIONS_FILTER_VALUES]
+        if bad:
+            raise WwiseValidationError(
+                f"filter values not in {{events, structures, media}}: {bad}"
+            )
+        effective_filter = list(filter)
+
     result: list[dict] = []
     
     for i, include_path in enumerate(include_paths):
@@ -252,7 +265,7 @@ def include_in_soundbank(
             "operation": "add",
             "inclusions": [{
                 "object": include_path,
-                "filter": ["events", "structures"]
+                "filter": effective_filter
             }]
         }
         
