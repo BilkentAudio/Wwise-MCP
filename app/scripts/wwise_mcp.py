@@ -375,6 +375,25 @@ def get_property_and_reference_names(
         )
         raise
 
+def get_music_transitions(
+    music_object_path: str
+) -> dict:
+    try:
+        if not music_object_path:
+            raise ValueError(
+                "Specify a music object path when retrieving music transitions."
+            )
+
+        return WwisePythonLibrary.get_music_transitions(
+            music_object_path
+        )
+
+    except Exception:
+        logger.exception(
+            "Failed to retrieve music transitions."
+        )
+        raise    
+
 def import_audio(
     source_paths: list[str],
     destination_paths: list[str],
@@ -888,6 +907,24 @@ COMMANDS: dict[str, Command] = {
         doc ="Retrieves all valid WAAPI properties and references available for a Wwise object. "
             "Useful for determining which '@Property' and '@@Property' fields may be queried or set on the object."
             "Args: object_path : str. Returns dict."
+    ),
+    "get_music_transitions": Command(
+        func=get_music_transitions,
+        doc="Retrieves all MusicTransition objects inside a music object such as a Music Switch Container, Music Playlist Container or Music Segment. "
+            "Useful for inspecting transition rules, sync behavior, fades, and transition segments. "
+            "Args: music_object_path: str. Returns dict. "
+            "Property reference for MusicTransition objects: "
+            "@ExitSourceAt — When to exit the source segment: 0=Immediate, 1=Next Grid, 2=Next Bar, 3=Next Beat, 4=Next Cue, 5=Next Custom Cue, 7=Exit Cue (6 is reserved). "
+            "@DestinationJumpPositionPreset (SyncTo) — Where to enter the destination: 0=Entry Cue, 1=Same Time as Playing Segment, 2=Random Cue, 3=Random Custom Cue, 4=Last Exit Position. "
+            "@DestinationPlaylistJumpTo (JumpTo) — Which segment to jump to in destination: 0=Start of Playlist, 1=Specific Playlist Item, 2=Last Played Segment, 3=Next Segment. "
+            "@SourceContextType / @DestinationContextType — 0=Any (null GUID), else specific object GUID in @SourceContextObject / @DestinationContextObject. "
+            "@UseTransitionObject — bool, whether a transition segment is used. "
+            "@EnableSourceFadeOut / @EnableDestinationFadeIn / @EnableTransitionFadeIn / @EnableTransitionFadeOut — bool, fade enable flags. "
+            "@FadeInDuration / @FadeOutDuration — fade durations in seconds. "
+            "@FadeInCurve / @FadeOutCurve — fade curve shapes. "
+            "@PlayDestinationPreEntry / @PlaySourcePostExit / @PlayTransitionPreEntry / @PlayTransitionPostExit — bool, pre/post entry/exit play flags. "
+            "@ExitSourceCustomCueMatchName / @JumpToCustomCueMatchName — str, custom cue names when using custom cue modes. "
+            "@JumpToCustomCueMatchMode — custom cue match mode for JumpTo. "
     ),
     "import_audio_files" : Command(
         func=import_audio, 

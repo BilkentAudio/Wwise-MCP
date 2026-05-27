@@ -1723,6 +1723,79 @@ def fetch_nodes(parent_path : str) -> str:
     return ([root] if root else []) + descendants
 
 # ==============================================================================
+#                     Music related 
+# ==============================================================================
+
+def get_music_transitions(
+    music_object_path: str
+) -> dict:
+    """
+    Retrieves authored MusicTransition objects from a music object's TransitionRoot.
+    """
+    root_result = waapi_call("ak.wwise.core.object.get", {
+        "from": {
+            "path": [music_object_path]
+        },
+        "options": {
+            "return": [
+                "id",
+                "name",
+                "type",
+                "path",
+                "@@TransitionRoot"
+            ]
+        }
+    })
+
+    root_objects = root_result.get("return", [])
+    if not root_objects:
+        return {"return": [], "note": "Object not found at path."}
+
+    root_obj = root_objects[0]
+    transition_root = root_obj.get("@@TransitionRoot")
+
+    if not transition_root:
+        return {"return": [], "note": "No TransitionRoot found.", "debug_root_obj": root_obj}
+
+    transition_root_id = transition_root.get("id")
+    if not transition_root_id:
+        return {"return": [], "note": "TransitionRoot found but no ID.", "debug_transition_root": transition_root}
+
+    return waapi_call("ak.wwise.core.object.get", {
+        "from": {
+            "id": [transition_root_id]
+        },
+        "transform": [
+            {"select": ["descendants"]},
+            {"where": ["type:isIn", ["MusicTransition"]]}
+        ],
+        "options": {
+            "return": [
+                "id", "name", "type", "path", "parent", "owner",
+                "@SourceContextType", "@SourceContextObject",
+                "@DestinationContextType", "@DestinationContextObject",
+                "@ExitSourceAt",
+                "@DestinationJumpPositionPreset",
+                "@DestinationPlaylistJumpTo",
+                "@UseTransitionObject",
+                "@EnableSourceFadeOut",
+                "@EnableDestinationFadeIn",
+                "@EnableTransitionFadeIn",
+                "@EnableTransitionFadeOut",
+                "@FadeInDuration", "@FadeOutDuration",
+                "@FadeInCurve", "@FadeOutCurve",
+                "@PlayDestinationPreEntry",
+                "@PlaySourcePostExit",
+                "@PlayTransitionPreEntry",
+                "@PlayTransitionPostExit",
+                "@ExitSourceCustomCueMatchName",
+                "@JumpToCustomCueMatchMode",
+                "@JumpToCustomCueMatchName"
+            ]
+        }
+    })
+
+# ==============================================================================
 #              Importing Audio Files into Wwise
 # ==============================================================================
 
