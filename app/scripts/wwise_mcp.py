@@ -13,6 +13,7 @@ from logging.handlers import RotatingFileHandler
 import re
 import subprocess
 import platform
+import os
 
 FILESYSTEM_OPS = {
     "get_all_audio_files_at_path_on_file_explorer",
@@ -22,6 +23,29 @@ FILESYSTEM_OPS = {
 def _extract_path_from_callstring(call: str) -> str | None:
     match = re.search(r'["\']([^"\']+)["\']', call)
     return match.group(1) if match else None
+
+def _extract_source_paths_from_callstring(call: str) -> list[str]:
+    """Extract all source file paths from an import_audio_files call-string."""
+    paths = []
+    i = 0
+    while True:
+        # Find next quoted string
+        for q in ('"', "'"):
+            start = call.find(q, i)
+            if start == -1:
+                continue
+            end = call.find(q, start + 1)
+            if end == -1:
+                continue
+            candidate = call[start + 1:end]
+            # Only take it if it looks like a file path
+            if '/' in candidate or '\\' in candidate:
+                paths.append(candidate)
+            i = end + 1
+            break
+        else:
+            break
+    return paths
 
 def _confirm_path_access(paths_summary: str) -> bool:
     if platform.system() == "Darwin":
@@ -1305,12 +1329,25 @@ async def execute_plan(plan: list[str]) -> dict[str, any]:
         step for step in plan
         if any(op in step for op in FILESYSTEM_OPS)
     ]
+    
     if fs_steps:
-        paths_summary = "\n".join(
-            f"  • {_extract_path_from_callstring(s) or s}"
-            for s in fs_steps
-        )
-        
+        raw_paths = []
+        for s in fs_steps:
+            if "import_audio_files" in s:
+                raw_paths.extend(_extract_source_paths_from_callstring(s))
+            else:
+                p = _extract_path_from_callstring(s)
+                if p:
+                    raw_paths.append(p + "/.")  # already a dir, sentinel for dirname
+
+        unique_dirs = sorted(set(os.path.dirname(p) for p in raw_paths))
+        # Remove parent dirs that are already covered by subdirs in the list
+        unique_dirs = [
+            d for d in unique_dirs
+            if not any(other.startswith(d + "/") for other in unique_dirs if other != d)
+        ]
+        paths_summary = "\n".join(f"  • {d}" for d in unique_dirs if d)
+
         # Run dialog in worker thread to avoid blocking the asyncio event loop
         # during user confirmation (which may take several seconds)
         confirmed = await anyio.to_thread.run_sync(_confirm_path_access, paths_summary)
