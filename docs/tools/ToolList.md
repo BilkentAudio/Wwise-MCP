@@ -325,13 +325,14 @@ Stops all sounds on all game objects in the captured session.
 ### `include_in_soundbank`
 
 **Description**  
-Includes specified objects (events, work units, folders, etc.) into one or more soundbanks by path.
+Includes specified objects (events, work units, folders, etc.) into one or more soundbanks by path. An optional `filter` selects which inclusion types (`events`, `structures`, `media`) are written; when omitted it defaults to `["events", "structures"]` (the previous fixed behaviour).
 
 **Example prompts**
 
 - “Include `\Events\Default Work Unit\Footsteps` in the soundbank `\SoundBanks\Default Work Unit\Footsteps_SoundBank`.”
 - “Add all events under `\Events\Weapons` to `\SoundBanks\Default Work Unit\Weapons_SB`.”
 - “Include these event paths [list] in the `MainGame` soundbank.”
+- “Include `\Events\Default Work Unit\Music` in `\SoundBanks\Default Work Unit\Music_SB` with media baked in (`filter=['events','structures','media']`).”
 
 ---
 

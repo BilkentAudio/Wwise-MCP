@@ -211,34 +211,70 @@ def get_all_soundbanks() -> list[str]:
             }
         )
 
+_SETINCLUSIONS_FILTER_VALUES = frozenset({"events", "structures", "media"})
+
+
 def include_in_soundbank(
-    include_paths: list[str], 
-    soundbank_path: str
+    include_paths: list[str],
+    soundbank_path: str,
+    filter: list[str] | None = None,
 ) -> list[dict]:
     """
     Add objects to a SoundBank's inclusions list.
-    
+
     Note: This operation is NOT atomic. If a failure occurs, all previous
     inclusions will have succeeded. The returned list contains responses for
     successfully included objects before the failure.
-    
+
     Args:
         include_paths: List of Wwise object paths to include in the SoundBank.
         soundbank_path: Path to the target SoundBank.
-    
+        filter: Optional inclusion-type filter passed to the WAAPI
+            setInclusions call. Allowed values are "events", "structures",
+            and "media"; at most 3 entries, each unique. When omitted,
+            defaults to ["events", "structures"] (the previous fixed
+            behaviour).
+
     Returns:
         list[dict]: List of WAAPI responses for each successful inclusion operation.
-        
+
     Raises:
         WwiseValidationError: If inputs are invalid.
         WwiseApiError: If any inclusion operation fails.
     """
     if not include_paths:
         raise WwiseValidationError("include_paths list cannot be empty")
-    
+
     if not soundbank_path or not soundbank_path.strip():
         raise WwiseValidationError("soundbank_path cannot be empty")
-    
+
+    if filter is None:
+        effective_filter = ["events", "structures"]
+    else:
+        if not isinstance(filter, list):
+            raise WwiseValidationError(
+                f"filter must be a list when provided, got {type(filter).__name__}"
+            )
+        non_str = [f for f in filter if not isinstance(f, str)]
+        if non_str:
+            raise WwiseValidationError(f"filter entries must be strings, got non-str: {non_str!r}")
+        bad = [f for f in filter if f not in _SETINCLUSIONS_FILTER_VALUES]
+        if bad:
+            raise WwiseValidationError(
+                f"filter values not in {{events, structures, media}}: {bad}"
+            )
+        if len(filter) > 3:
+            raise WwiseValidationError(
+                f"filter accepts at most 3 entries (WAAPI maxItems:3), got {len(filter)}"
+            )
+        seen: set[str] = set()
+        duplicates = [f for f in filter if f in seen or seen.add(f)]
+        if duplicates:
+            raise WwiseValidationError(
+                f"filter values must be unique, duplicates: {sorted(set(duplicates))}"
+            )
+        effective_filter = list(filter)
+
     result: list[dict] = []
     
     for i, include_path in enumerate(include_paths):
@@ -252,7 +288,7 @@ def include_in_soundbank(
             "operation": "add",
             "inclusions": [{
                 "object": include_path,
-                "filter": ["events", "structures"]
+                "filter": effective_filter
             }]
         }
         
