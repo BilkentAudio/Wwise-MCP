@@ -721,6 +721,73 @@ def list_all_audio_files_at_path_on_file_explorer(root_path:str)->list[str]:
         logger.exception("Failed to retrieve audio at root path %r", root_path)
         raise
 
+def set_object(
+    object_path: str,
+    reference_type: str,
+    reference_path: str | list[str]
+) -> None:
+
+    if not object_path or not reference_type:
+        raise ValueError("Ensure object path and reference name fields are not empty when setting object reference.")
+
+    if reference_path is None:
+        raise ValueError("reference_type cannot be None.")
+
+    if isinstance(reference_path, str) and not reference_path:
+        raise ValueError("reference_path: String values cannot be empty.")
+
+    if isinstance(reference_path, list) and not reference_path:
+        raise ValueError("List values cannot be empty.")
+    
+    try:
+        WwisePythonLibrary.set_object(
+            object_path,
+            {f"@{reference_type}": reference_path}
+        )
+    except Exception:
+        logger.exception("Failed to set object.")
+        raise
+
+def assign_music_arguments(
+    container_path: str,
+    group_paths: list[str]
+) -> None:
+
+    if not container_path:
+        raise ValueError("container_path must be specified")
+
+    if not group_paths:
+        raise ValueError("group_paths must contain at least one path")
+
+    return WwisePythonLibrary.assign_music_arguments(container_path, group_paths)
+
+def assign_music_entries(
+    container_path: str,
+    entries: list[dict]
+) -> None:
+    
+    if not container_path:
+        raise ValueError("container_path must be specified")
+
+    if not entries:
+        raise ValueError("entries must contain at least one entry")
+
+    return WwisePythonLibrary.assign_music_entries(container_path, entries)
+
+def set_playlist_root(
+    playlist_container_path: str,
+    items: list[dict],
+    loop_count: int = 0
+) -> None:
+
+    if not playlist_container_path:
+        raise ValueError("playlist_container_path must be specified")
+
+    if not items:
+        raise ValueError("items must contain at least one playlist item")
+
+    return WwisePythonLibrary.set_playlist_root(playlist_container_path, items, loop_count)
+
 def set_object_reference( 
     object_path: str, 
     reference_type: str, 
@@ -1096,6 +1163,54 @@ COMMANDS: dict[str, Command] = {
         func=list_all_audio_files_at_path_on_file_explorer, 
         doc="Returns the path to all audio files given the parent folder path on file explorer (eg. 'C:/Audio')"
             "Args: root_path : str. Returns a list[str]"
+    ),
+    "set_object" : Command(
+        func=set_object,
+        doc="Low-level wrapper around ak.wwise.core.object.set. Sets list/complex fields "
+            "on an existing Wwise object that setProperty and setReference cannot handle. "
+            "Prefer specialized wrappers when available — e.g. assign_music_arguments, "
+            "assign_music_entries, set_playlist_root for music structures. "
+            "Use this directly only when no wrapper exists for the target field. "
+            "reference_path accepts a path string, a list of paths, or a list of WAAPI "
+            "schema dicts ({'type': '<WaapiType>', 'name': '', '@PropName': value, ...}) "
+            "depending on the field's schema. "
+            "Args: object_path : str, reference_type : str (without '@' prefix), "
+            "reference_path : str | list[str] | list[dict]. Returns None."
+    ),
+    "assign_music_arguments": Command(
+        func=assign_music_arguments,
+        doc="Assigns one or more State/Switch Groups as Arguments on a MusicSwitchContainer "
+            "(the Switch/State tab 'Group' field). This is the source the container reads "
+            "from to decide which child to play. Wraps ak.wwise.core.object.set with the "
+            "MusicArgumentsSlot schema internally. "
+            "Must be called before assign_music_entries — entries require Arguments to exist. "
+            "Args: container_path : str, group_paths : list[str] (StateGroup or SwitchGroup paths). "
+            "Returns None."
+    ),
+    "assign_music_entries": Command(
+        func=assign_music_entries,
+        doc="Assigns child-to-state/switch mappings on a MusicSwitchContainer's Assigned "
+            "Objects view. Each entry maps a State/Switch (or tuple of them for multi-argument "
+            "containers) to a child audio node — MusicPlaylistContainer, MusicSegment, or "
+            "nested MusicSwitchContainer. Wraps ak.wwise.core.object.set with the "
+            "MultiSwitchEntry / EntryPathSlot schema internally. "
+            "Requires @Arguments to be assigned first via assign_music_arguments. "
+            "Args: container_path : str, entries : list[dict] where each dict has "
+            "'state_or_switch' (str, full Wwise path to the State or Switch object for single-argument containers, list[str] for multi-argument "
+            "in the same order as @Arguments) and 'audio_node' (str path to child). "
+            "Returns None. "
+    ),
+    "set_playlist_root": Command(
+        func=set_playlist_root,
+        doc="Populates a MusicPlaylistContainer's @PlaylistRoot tree with MusicPlaylistItems. "
+            "Replaces any existing playlist. Builds the nested MusicPlaylistItem schema "
+            "internally and wraps ak.wwise.core.object.set. "
+            "Each item dict has: 'segment' (str path to a MusicSegment), optional "
+            "'playlist_item_type' (1=Segment [default], 0=Group), optional 'loop_count' "
+            "(int, default 1), and optional 'children' (list[dict]) for nested Group items. "
+            "Args: playlist_container_path : str, items : list[dict], "
+            "loop_count : int = 0 (root node loop count, 0 = infinite). "
+            "Returns None."
     ),
     "set_object_reference" : Command(
         func=set_object_reference,

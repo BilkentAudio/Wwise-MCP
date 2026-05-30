@@ -1476,6 +1476,244 @@ def rename_objects(
     
     return result
 
+def set_object(
+    object_path: str,
+    properties: dict
+) -> None:
+
+    """
+    Sets one or more properties/references on an existing Wwise object using
+
+    ak.wwise.core.object.set with onNameConflict='merge'.
+
+    Use this for list-type or complex fields that cannot be set via
+    setProperty or setReference, such as:
+    - @Arguments     : state/switch group subscription on MusicSwitchContainer.
+                        Must be a list of MusicArgumentsSlot dicts:
+                        [{'type': 'MusicArgumentsSlot', 'name': '', '@Argument': '<StateGroup or SwitchGroup path>'}]
+    - @Entries       : child-to-state/switch assignments on MusicSwitchContainer.
+                        Must be a list of MultiSwitchEntry dicts:
+                        [{'type': 'MultiSwitchEntry', 'name': '', '@EntryPath': [{'type': 'EntryPathSlot', 'name': '', '@EntryPathObject': '<State or Switch path>'}], '@AudioNode': '<child path>'}]
+    - @PlaylistRoot / @TransitionRoot : nested music structures using MusicPlaylistItem dicts.
+
+    Parameters
+    ----------
+    object_path : str
+        Path to the target Wwise object (must already exist).
+    properties : dict
+        '@PropertyName': value pairs. Values can be scalars, lists, or
+        nested dicts as required by the WAAPI schema for that field.
+
+    Example
+    -------
+
+    object_set(
+        r"\Containers\Music\MusicSwitchContainer\CombatEnd",
+        {"@Arguments": [{"type": "MusicArgumentsSlot", "name": "", "@Argument": r"\States\Default Work Unit\CombatEndState"}]}
+    )
+    """
+
+    if not object_path:
+        raise ValueError("object_path must be specified")
+
+    if not properties:
+        raise ValueError("properties must not be empty")
+
+    return waapi_call(
+        "ak.wwise.core.object.set",
+        {"objects": [
+            {
+                "object": object_path,
+                "onNameConflict": "merge",
+                **properties
+            }]
+        }
+    )
+
+def assign_music_arguments(
+    container_path: str,
+    group_paths: list[str]
+) -> None:
+
+    """
+    Assigns one or more State/Switch Groups as Arguments to a MusicSwitchContainer.
+    This sets the Switch/State tab "Group" field — the source the container reads
+    from to decide which child to play.
+
+    Parameters
+    ----------
+
+    container_path : str
+        Path to an existing MusicSwitchContainer.
+
+    group_paths : list[str]
+        One or more StateGroup or SwitchGroup paths, e.g.
+        r"\States\Default Work Unit\MusicState".
+
+    Example
+    -------
+
+    assign_music_arguments(
+        r"\Containers\Music\MusicSwitchContainer",
+        [r"\States\Default Work Unit\MusicState"]
+    )
+    """
+
+    if not container_path:
+        raise ValueError("container_path must be specified")
+
+    if not group_paths:
+        raise ValueError("group_paths must contain at least one path")
+
+    arguments = [
+        {"type": "MusicArgumentsSlot", "name": "", "@Argument": path}
+        for path in group_paths
+    ]
+
+    return set_object(container_path, {"@Arguments": arguments})
+
+def assign_music_entries(
+    container_path: str,
+    entries: list[dict]
+) -> None:
+
+    """
+    Assigns child-to-state/switch mappings on a MusicSwitchContainer's Assigned
+    Objects view. Each entry maps a State or Switch (or a tuple across multiple
+    Arguments) to a child audio node (MusicPlaylistContainer, MusicSegment, or
+    nested MusicSwitchContainer).
+
+    Parameters
+    ----------
+
+    container_path : str
+        Path to an existing MusicSwitchContainer. Its @Arguments must already
+        be assigned via assign_music_arguments first.
+
+    entries : list[dict]
+        Each dict has:
+          - 'state_or_switch' : str | list[str]
+              Single path for single-argument containers, or a list of paths
+              in the same order as the container's @Arguments for multi-arg.
+          - 'audio_node' : str
+              Path to the child audio node to play when the state/switch matches.
+
+    Example
+    -------
+
+    assign_music_entries(
+        r"\Containers\Music\MusicSwitchContainer",
+
+        [
+            {"state_or_switch": r"\States\Default Work Unit\MusicState\Explore",
+             "audio_node": r"\Containers\Music\MusicSwitchContainer\Explore"},
+            {"state_or_switch": r"\States\Default Work Unit\MusicState\Combat",
+             "audio_node": r"\Containers\Music\MusicSwitchContainer\Combat"},
+        ]
+    )
+    """
+
+    if not container_path:
+        raise ValueError("container_path must be specified")
+
+    if not entries:
+        raise ValueError("entries must contain at least one entry")
+
+    multi_switch_entries = []
+
+    for entry in entries:
+        sos = entry.get("state_or_switch")
+        audio_node = entry.get("audio_node")
+
+        if not sos or not audio_node:
+            raise ValueError(
+                "Each entry must have 'state_or_switch' and 'audio_node' keys."
+            )
+
+        paths = [sos] if isinstance(sos, str) else list(sos)
+
+        entry_path = [
+            {"type": "EntryPathSlot", "name": "", "@EntryPathObject": p}
+            for p in paths
+        ]
+
+        multi_switch_entries.append({
+            "type": "MultiSwitchEntry",
+            "name": "",
+            "@EntryPath": entry_path,
+            "@AudioNode": audio_node,
+        })
+
+    return set_object(container_path, {"@Entries": multi_switch_entries})
+
+def set_playlist_root(
+    playlist_container_path: str,
+    items: list[dict],
+    loop_count: int = 0
+
+) -> None:
+
+    """
+    Sets the @PlaylistRoot of a MusicPlaylistContainer — i.e. populates its
+    playlist tree with MusicPlaylistItems. Replaces any existing playlist.
+    Parameters
+    ----------
+
+    playlist_container_path : str
+        Path to an existing MusicPlaylistContainer.
+    items : list[dict]
+        Each item dict has:
+          - 'segment' : str       (path to a MusicSegment)
+          - 'playlist_item_type' : int, optional
+                1 = Segment (default), 0 = Group
+          - 'loop_count' : int, optional (default 1)
+          - 'children' : list[dict], optional (for nested group items)
+
+    loop_count : int
+        Loop count on the root playlist node (0 = infinite).
+    Example
+    -------
+
+    set_playlist_root(
+        r"\Containers\Music\MusicSwitchContainer\CombatEnd\Victory",
+        items=[
+            {"segment": r"\Containers\Music\...\VictorySegment", "playlist_item_type": 1}
+        ]
+    )
+    """
+
+    if not playlist_container_path:
+        raise ValueError("playlist_container_path must be specified")
+
+    if not items:
+        raise ValueError("items must contain at least one playlist item")
+
+    def build_item(item):
+        d = {
+            "type": "MusicPlaylistItem",
+            "name": "",
+            "@PlaylistItemType": item.get("playlist_item_type", 1),
+            "@LoopCount": item.get("loop_count", 1),
+        }
+
+
+        if "segment" in item:
+            d["@Segment"] = item["segment"]
+
+
+        if "children" in item:
+            d["children"] = [build_item(c) for c in item["children"]]
+        return d
+
+    root = {
+        "type": "MusicPlaylistItem",
+        "name": "",
+        "@LoopCount": loop_count,
+        "children": [build_item(i) for i in items],
+    }
+
+    return set_object(playlist_container_path, {"@PlaylistRoot": root})
+
 def set_reference(
     object_path: str,
     reference_name: str,
