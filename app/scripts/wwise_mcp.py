@@ -20,32 +20,26 @@ FILESYSTEM_OPS = {
     "import_audio_files",
 }
 
-def _extract_path_from_callstring(call: str) -> str | None:
-    match = re.search(r'["\']([^"\']+)["\']', call)
-    return match.group(1) if match else None
+def _fs_access_dirs(call: str) -> list[str] | None:
+    """Directories a step will touch on disk, or None if it isn't a filesystem op.
+    Raises SyntaxError/ValueError on unparseable input — caller must fail closed."""
+    node = ast.parse(call.strip(), mode="eval").body
+    if not isinstance(node, ast.Call):
+        return None
+    fn = getattr(node.func, "id", None)
+    if fn not in FILESYSTEM_OPS:
+        return None
 
-def _extract_source_paths_from_callstring(call: str) -> list[str]:
-    """Extract all source file paths from an import_audio_files call-string."""
-    paths = []
-    i = 0
-    while True:
-        # Find next quoted string
-        for q in ('"', "'"):
-            start = call.find(q, i)
-            if start == -1:
-                continue
-            end = call.find(q, start + 1)
-            if end == -1:
-                continue
-            candidate = call[start + 1:end]
-            # Only take it if it looks like a file path
-            if '/' in candidate or '\\' in candidate:
-                paths.append(candidate)
-            i = end + 1
-            break
-        else:
-            break
-    return paths
+    args = [ast.literal_eval(a) for a in node.args]
+    kwargs = {k.arg: ast.literal_eval(k.value) for k in node.keywords}
+
+    if fn == "import_audio_files":
+        sources = kwargs.get("source_paths") or (args[0] if args else [])
+        return [os.path.dirname(p.replace("\\", "/")) for p in sources]
+
+    # get_all_audio_files_at_path_on_file_explorer — root_path is already a dir
+    root = kwargs.get("root_path") or (args[0] if args else None)
+    return [root.replace("\\", "/").rstrip("/")] if root else []
 
 def _confirm_path_access(paths_summary: str) -> bool:
     if platform.system() == "Darwin":
@@ -1075,7 +1069,10 @@ COMMANDS: dict[str, Command] = {
     ),
     "import_audio_files" : Command(
         func=import_audio, 
-        doc="Imports every audio file via its absolute path into the desired Wwise object path (include the object to be imported into the path as well). Validate destination path exists first via resolve_all_path_relationships_in if uncertain."
+        doc="Imports every audio file via its absolute path into the desired Wwise object path. " \
+            "Each destination_path is the FULL path of the Sound to CREATE — it must end with the new Sound's name, NOT the parent container. " \
+            "correct:   ...\MyContainer\GunA_Body_01"
+            "wrong:     ...\MyContainer   (imports onto the container; no child created) "
             "Args: source_paths: list[str], destination_paths: list[str]. Returns list[dict]"
     ),
     "list_all_event_names" : Command(
@@ -1444,38 +1441,36 @@ async def execute_plan(plan: list[str]) -> dict[str, any]:
     ]
 
     # Check for filesystem ops and confirm with user before execution
-    fs_steps = [
-        step for step in plan
-        if any(op in step for op in FILESYSTEM_OPS)
-    ]
-    
-    if fs_steps:
-        raw_paths = []
-        for s in fs_steps:
-            if "import_audio_files" in s:
-                raw_paths.extend(_extract_source_paths_from_callstring(s))
-            else:
-                p = _extract_path_from_callstring(s)
-                if p:
-                    raw_paths.append(p + "/.")  # already a dir, sentinel for dirname
+    access_dirs: set[str] = set()
+    first_fs_step: str | None = None
+    for s in plan:
+        try:
+            step_dirs = _fs_access_dirs(s)
+        except (SyntaxError, ValueError):
+            return {
+                "status": "error",
+                "error": "Could not parse a step for file-access confirmation; refusing to execute.",
+                "failed_step": s,
+            }
+        if step_dirs is None:
+            continue                      # not a filesystem op
+        if first_fs_step is None:
+            first_fs_step = s
+        access_dirs.update(d for d in step_dirs if d)
 
-        unique_dirs = sorted(set(os.path.dirname(p) for p in raw_paths))
-        # Remove parent dirs that are already covered by subdirs in the list
-        unique_dirs = [
-            d for d in unique_dirs
-            if not any(other.startswith(d + "/") for other in unique_dirs if other != d)
-        ]
-        paths_summary = "\n".join(f"  • {d}" for d in unique_dirs if d)
+    if access_dirs:
+        dirs = sorted(access_dirs)
+        # keep only leaf dirs (drop ancestors already covered by a deeper entry)
+        dirs = [d for d in dirs
+                if not any(o != d and o.startswith(d + "/") for o in dirs)]
+        paths_summary = "\n".join(f"  • {d}" for d in dirs)
 
-        # Run dialog in worker thread to avoid blocking the asyncio event loop
-        # during user confirmation (which may take several seconds)
         confirmed = await anyio.to_thread.run_sync(_confirm_path_access, paths_summary)
-
         if not confirmed:
             return {
                 "status": "error",
                 "error": "User denied file system access.",
-                "failed_step": fs_steps[0]
+                "failed_step": first_fs_step,
             }
 
     # Inject undo group wrapping around authoring steps
