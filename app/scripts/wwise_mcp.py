@@ -1071,8 +1071,8 @@ COMMANDS: dict[str, Command] = {
         func=import_audio, 
         doc="Imports every audio file via its absolute path into the desired Wwise object path. " \
             "Each destination_path is the FULL path of the Sound to CREATE — it must end with the new Sound's name, NOT the parent container. " \
-            "correct:   ...\MyContainer\GunA_Body_01"
-            "wrong:     ...\MyContainer   (imports onto the container; no child created) "
+            "correct:   ...\\MyContainer\\GunA_Body_01"
+            "wrong:     ...\\MyContainer   (imports onto the container; no child created) "
             "Args: source_paths: list[str], destination_paths: list[str]. Returns list[dict]"
     ),
     "list_all_event_names" : Command(
