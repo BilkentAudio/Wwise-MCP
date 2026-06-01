@@ -782,6 +782,27 @@ def set_playlist_root(
 
     return WwisePythonLibrary.set_playlist_root(playlist_container_path, items, loop_count)
 
+def add_rtpc_binding(
+    object_path: str,
+    control_input: str,
+    property_name: str,
+    points: list[dict] | None = None,
+    notes: str = ""
+) -> None:
+
+    if not object_path:
+        raise ValueError("object_path must be specified")
+
+    if not control_input:
+        raise ValueError("control_input must be specified")
+
+    if not property_name:
+        raise ValueError("property_name must be specified")
+
+    return WwisePythonLibrary.add_rtpc_binding(
+        object_path, control_input, property_name, points, notes
+    )
+
 def set_object_reference( 
     object_path: str, 
     reference_type: str, 
@@ -1207,6 +1228,22 @@ COMMANDS: dict[str, Command] = {
             "(int, default 1), and optional 'children' (list[dict]) for nested Group items. "
             "Args: playlist_container_path : str, items : list[dict], "
             "loop_count : int = 0 (root node loop count, 0 = infinite). "
+            "Returns None."
+    ),
+    "add_rtpc_binding": Command(
+        func=add_rtpc_binding,
+        doc="Adds an RTPC binding to an existing object's @RTPC list. Creates only the "
+            "binding — the link between a control input, a target property, and a curve; "
+            "does NOT create the control input, which must already exist and is passed by "
+            "reference. Builds the nested RTPC/Curve schema internally and wraps "
+            "ak.wwise.core.object.set. control_input is a path or GUID to an existing "
+            "GameParameter, Modulator, or MIDI object (the RTPC x-axis source). "
+            "property_name is the bare driven property, e.g. 'OutputBusVolume', 'Volume', "
+            "'Pitch', 'Lowpass'. points is an optional list of dicts, each "
+            "{'x': float, 'y': float, 'shape': str} (shape default 'Linear'); if omitted, "
+            "Wwise generates its default curve. "
+            "Args: object_path : str, control_input : str, property_name : str, "
+            "points : list[dict] | None = None, notes : str = ''. "
             "Returns None."
     ),
     "set_object_reference" : Command(

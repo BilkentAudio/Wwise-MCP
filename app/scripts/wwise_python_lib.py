@@ -1714,6 +1714,95 @@ def set_playlist_root(
 
     return set_object(playlist_container_path, {"@PlaylistRoot": root})
 
+def _normalize_curve_point(point) -> dict:
+    """Normalize a curve point into the WAAPI {'x', 'y', 'shape'} dict form."""
+    if isinstance(point, dict):
+        if "x" not in point or "y" not in point:
+            raise ValueError(f"curve point dict must contain 'x' and 'y': {point}")
+        return {"x": point["x"], "y": point["y"], "shape": point.get("shape", "Linear")}
+    if isinstance(point, (tuple, list)):
+        if len(point) == 2:
+            x, y, shape = (*point, "Linear")
+        elif len(point) == 3:
+            x, y, shape = point
+        else:
+            raise ValueError(f"curve point tuple must be (x, y) or (x, y, shape): {point}")
+        return {"x": x, "y": y, "shape": shape}
+    raise TypeError(f"unsupported curve point type: {type(point).__name__}")
+
+def add_rtpc_binding(
+    object_path: str,
+    control_input: str,
+    property_name: str,
+    points: list | None = None,
+    notes: str = ""
+) -> None:
+
+    """
+    Adds an RTPC binding (with optional curve) to an existing object's "@RTPC"
+    list via set_object.
+
+    This creates the RTPC *binding* — the link between a control input, a target
+    property, and a curve. It does NOT create the control input: the game
+    parameter / Modulator / MIDI object referenced by `control_input` must
+    already exist, since it is passed by reference (path or GUID).
+
+    Parameters
+    ----------
+    object_path : str
+        Path to the target object that will host the RTPC (must already exist).
+    control_input : str
+        Path or GUID of an existing GameParameter, Modulator, or MIDI object.
+        This is the x-axis source of the RTPC.
+    property_name : str
+        The property driven by the RTPC, e.g. "OutputBusVolume", "Volume",
+        "Pitch", "Lowpass". Passed as the bare property name (no leading '@').
+    points : list, optional
+        Curve points. Each item may be either a dict
+        ({"x": <float>, "y": <float>, "shape": <str>}) or a tuple
+        ((x, y) or (x, y, shape)). 'shape' defaults to "Linear" when omitted.
+        If None, @Curve is omitted and Wwise generates its default curve.
+    notes : str, optional
+        Notes string stored on the RTPC binding.
+
+    Example
+    -------
+
+    add_rtpc(
+        r"\Actor-Mixer Hierarchy\Default Work Unit\Engine",
+        control_input=r"\Game Parameters\Default Work Unit\RPM",
+        property_name="OutputBusVolume",
+        points=[(0, -20.83), (1000, 21.85)]
+    )
+    """
+
+    if not object_path:
+        raise ValueError("object_path must be specified")
+
+    if not control_input:
+        raise ValueError("control_input must be specified")
+
+    if not property_name:
+        raise ValueError("property_name must be specified")
+
+    rtpc = {
+        "type": "RTPC",
+        "name": "",
+        "notes": notes,
+        "@PropertyName": property_name,
+        "@ControlInput": control_input,
+    }
+
+    if points is not None:
+        if not points:
+            raise ValueError("points must contain at least one point when provided")
+        rtpc["@Curve"] = {
+            "type": "Curve",
+            "points": [_normalize_curve_point(p) for p in points],
+        }
+
+    return set_object(object_path, {"@RTPC": [rtpc]})
+
 def set_reference(
     object_path: str,
     reference_name: str,
