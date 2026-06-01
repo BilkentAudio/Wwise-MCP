@@ -1186,6 +1186,155 @@ def get_all_switchgroups_and_switches_grouped():
    return get_all_gamesyncgroups_and_gamesyncs_grouped(SWITCH_ROOT, SWITCH_TYPE)
 
 # ==============================================================================
+#                        Wwise Queries
+# ==============================================================================
+
+_DEFAULT_RETURN_FIELDS = ["id", "name", "type", "path"]
+ 
+def run_waql(waql: str, return_fields: list[str] | None = None) -> list[dict]:
+    """Execute a raw WAQL query against the project.
+ 
+    Thin passthrough over ak.wwise.core.object.get using the `waql` argument.
+    Use for any ad-hoc query — referencesTo, descendants, where-filters,
+    ofType scans, etc.
+ 
+    Args:
+        waql: A WAQL query string, e.g.
+              '$ "\\Game Parameters\\Default Work Unit\\BlendTest" select referencesTo'.
+        return_fields: WAAPI return fields. Defaults to ['id','name','type','path'].
+ 
+    Returns:
+        list[dict] of matching objects.
+    """
+    operation = "ak.wwise.core.object.get"
+ 
+    if not waql or not waql.strip():
+        raise WwiseApiError(
+            "waql must be a non-empty WAQL query string.",
+            operation=operation,
+            details={"waql": waql}
+        )
+ 
+    # Match get_objects_info: `options` is nested inside the args dict, and waapi_call
+    # is called with a single args argument. Passing options as a third positional is
+    # silently dropped by waapi_call, which is why return fields never threaded before.
+    args = {
+        "waql": waql,
+        "options": {"return": return_fields or _DEFAULT_RETURN_FIELDS},
+    }
+ 
+    try:
+        response = waapi_call(operation, args)
+ 
+        if not isinstance(response, dict):
+            raise WwiseApiError(
+                f"WAAPI returned unexpected type: {type(response).__name__}",
+                operation=operation,
+                details={"response_type": type(response).__name__}
+            )
+ 
+        objs = response.get("return", [])
+ 
+        if not isinstance(objs, list):
+            raise WwiseApiError(
+                f"'return' field is not a list: {type(objs).__name__}",
+                operation=operation,
+                details={"return_type": type(objs).__name__}
+            )
+ 
+        return objs
+ 
+    except (WwisePyLibError):
+        raise
+ 
+    except Exception as e:
+        raise WwiseApiError(
+            f"Unexpected error: {str(e)}",
+            operation=operation,
+            details={
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "waql": waql
+            }
+        ) from e
+ 
+ 
+def find_references_to(object_ref: str, return_fields: list[str] | None = None) -> list[dict]:
+    """Find every object that references the given object (inverse-reference lookup).
+ 
+    One-shot answer to "what currently uses this object?". Works for any
+    referenceable target: Game Parameters (RTPC control inputs, Blend Track
+    LayerCrossFadeControlInput, attenuation-curve inputs), Buses, Switches/States,
+    Effects, Attenuations, etc.
+ 
+    Args:
+        object_ref: A GUID '{XXXXXXXX-...}', a project path
+                    '\\Game Parameters\\Default Work Unit\\BlendTest', or a
+                    qualified name 'GameParameter:BlendTest'.
+        return_fields: WAAPI return fields. Defaults to ['id','name','type','path'].
+ 
+    Returns:
+        list[dict] of objects that reference object_ref.
+    """
+    operation = "ak.wwise.core.object.get"
+ 
+    if not object_ref or not object_ref.strip():
+        raise WwiseApiError(
+            "object_ref must be a non-empty GUID, path, or qualified name.",
+            operation=operation,
+            details={"object_ref": object_ref}
+        )
+ 
+    ref = object_ref.strip()
+ 
+    # referencesTo returns the immediate referrers. Two shapes come back:
+    #   1. A NAMED object that holds the reference directly on itself, e.g. a Switch
+    #      Container's @SwitchGroupOrStateGroup. These are already the answer.
+    #   2. An anonymous binding / list-element node, e.g. an RTPC/curve binding or a
+    #      Music Switch Container assignment entry. These have no useful name and must
+    #      be climbed via `owner` to reach the object that holds them.
+    #
+    # So we must NOT blindly climb: a fixed `select owner` over-climbs the case-1
+    # objects (a tree object has a `parent`, not an `owner`, so `owner` returns empty
+    # and the named result vanishes). Instead, keep named referrers as-is, and climb
+    # `owner` only while the current node is unnamed. Depth varies by reference type
+    # (RTPC = 1 hop, music assignment entries = 2), so climb until named rather than a
+    # fixed number of hops, then dedupe.
+    #
+    # Note: tree-walks (`ancestors`/`parent`) don't help the anonymous nodes because
+    # list-element binding nodes aren't in the object tree; `owner` is the link.
+    # Paths/GUIDs/qualified-names all sit fine inside WAQL double quotes; a single
+    # backslash in a path is literal in WAQL, so no runtime escaping is needed.
+    _MAX_OWNER_HOPS = 8
+ 
+    referrers = run_waql(f'$ "{ref}" select referencesTo', return_fields)
+ 
+    resolved: list[dict] = []
+    seen: set[str] = set()
+    for obj in referrers:
+        cur = obj
+        hops = 0
+        # Climb only while unnamed (i.e. still an anonymous binding/entry node) and we
+        # still have an id to climb from. Named referrers skip this entirely.
+        while cur and not cur.get("name") and cur.get("id") and hops < _MAX_OWNER_HOPS:
+            owners = run_waql(f'$ "{cur["id"]}" select owner', return_fields)
+            if not owners:
+                break
+            cur = owners[0]
+            hops += 1
+ 
+        if not cur:
+            continue
+        oid = cur.get("id")
+        if oid is not None and oid in seen:
+            continue
+        if oid is not None:
+            seen.add(oid)
+        resolved.append(cur)
+ 
+    return resolved
+
+# ==============================================================================
 #                      Wwise Object Getters
 # ==============================================================================
 

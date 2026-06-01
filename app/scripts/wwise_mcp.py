@@ -517,6 +517,28 @@ def list_all_game_objects():
     except Exception: 
         logger.exception("Failed to retrieve game objects in wwise project.")
         raise
+
+def run_waql(
+    waql: str, 
+    return_fields: list[str] | None = None
+) -> list[dict]:
+    
+    try:
+        return WwisePythonLibrary.run_waql(waql, return_fields)
+    except Exception:
+        logger.exception("Failed to execute WAQL query.")
+        raise
+
+def find_references_to(
+    object_ref: str, 
+    return_fields: list[str] | None = None
+) -> list[dict]:
+    
+    try:
+        return WwisePythonLibrary.find_references_to(object_ref, return_fields)
+    except Exception:
+        logger.exception("Failed to find references to object.")
+        raise
     
 def post_event(
     event_name: str, 
@@ -1121,6 +1143,27 @@ COMMANDS: dict[str, Command] = {
         doc="List all game objects present in the wwise session."
             "Args: None, Returns list[dict]"
     ),
+    "run_waql" : Command(
+        func=run_waql,
+        doc="Execute a raw WAQL query against the project and return matching objects."
+            "Use for any ad-hoc query: 'select referencesTo', 'select descendants', "
+            "'where' filters, 'ofType' scans, etc. Example query: "
+            "'$ \"\\Game Parameters\\Default Work Unit\\BlendTest\" select referencesTo'. "
+            "return_fields supports '@Prop'/'@@Prop' fields like get_objects_info; "
+            "defaults to ['id','name','type','path']."
+            "Args: waql : str, return_fields : list[str] | None = None. Returns list[dict]"
+    ),
+    "find_references_to" : Command(
+        func=find_references_to,
+        doc="Find every object that references the given object (inverse-reference lookup). "
+            "One-shot answer to 'what currently uses this object?' - resolves RTPC control "
+            "inputs, Blend Track crossfade inputs, attenuation-curve inputs, OutputBus/aux "
+            "sends, Switch/State usage, Effect usage, etc. object_ref accepts a GUID "
+            "'{XXXXXXXX-...}', a project path '\\Game Parameters\\Default Work Unit\\BlendTest', "
+            "or a qualified name 'GameParameter:BlendTest'. return_fields defaults to "
+            "['id','name','type','path']."
+            "Args: object_ref : str, return_fields : list[str] | None = None. Returns list[dict]"
+    ),
     "post_event" : Command(
         func=post_event, 
         doc="Posts the event by its name on the game object specified by its name after a delay in milliseconds"
@@ -1382,7 +1425,7 @@ def _extract_attr(obj, attr):
 
 #  C. $var resolver (works on scalars / list / dict) 
 def _resolve(val, store):
-    if isinstance(val, str) and val.startswith("$"):
+    if isinstance(val, str) and val.startswith("$last"):
         key, *rest = val[1:].split(".", 1)
         if key not in store:
             raise KeyError(f"Variable '{key}' not found")
