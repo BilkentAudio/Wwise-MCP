@@ -1027,7 +1027,7 @@ COMMANDS: dict[str, Command] = {
     "create_rtpcs": Command(
         func=create_rtpcs,
         doc="Creates rtpcs in one batch."
-            "Args: rtpc_names : list[str], parent_paths : list[str], min_value : list[float], max_value : list[float]source_paths (list[str]), dst_parent_paths (list[str]), event_types (list[str]), event_names (list[str]). All four lists must have the same length. " \
+            "Args: rtpc_names : list[str], parent_paths : list[str], min_value : list[float], max_value : list[float] " 
             "Returns: list[dict]. parent path should always start with '\\Game Parameters'. If user does not specify min_values or max_values use 0.0 for min and 100.0 for max."
     ),
     "create_switch_groups" : Command(
@@ -1042,14 +1042,14 @@ COMMANDS: dict[str, Command] = {
         doc="Creates a list of switches"
             "Args: names: list[str], parent_paths : list[str]." 
             "Returns: list[dict]. The parent path should always start with either '\\Switches' and represents the SwitchGroup the given switch belongs to."
-            "Note that if you are creating a new StateGroup, the Group must always be created first before its Children."
+            "Note that if you are creating a new SwitchGroup, the Group must always be created first before its Children."
     ),
     "create_state_groups" : Command(
         func=create_state_groups,
         doc="Creates a list of state groups"
             "Args: names: list[str], parent_paths : list[str]:" 
             "Returns: list[dict]. A parent path should always start with either '\\States'."
-            "Note that if you are creating a new Stateroup, the Group must always be created first before its Children."
+            "Note that if you are creating a new StateGroup, the Group must always be created first before its Children."
     ),
     "create_states" : Command(
         func=create_states,
