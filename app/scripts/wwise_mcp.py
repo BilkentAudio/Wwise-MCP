@@ -156,7 +156,7 @@ def create_child_objects(
 
         result : list[dict] = []
         for parent_id, child_name, child_type in zip(parent_ids, child_names, child_types):
-            result.extend(WwisePythonLibrary.create_object(parent_id, child_name, child_type))
+            result.append(WwisePythonLibrary.create_object(parent_id, child_name, child_type))
 
         return result
     

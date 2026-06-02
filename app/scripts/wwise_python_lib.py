@@ -2421,11 +2421,10 @@ def create_object(
     """
     Creates the specified object type under `parent_path`.
 
-    Returns the GUID (string) of the newly-created object.
+    Returns the created object as a dict (e.g. {'id': '{GUID}', 'name': ...}).
     """
     try:  
-        res: dict = []
-        res = waapi_call(
+        return waapi_call(
                 "ak.wwise.core.object.create",
                 {
                  "parent": parent_id,          # WAQL or back-slash path
@@ -2433,8 +2432,7 @@ def create_object(
                  "name":   child_name,           # requested name for new work or folder 
                  "onNameConflict": on_conflict   # "fail", "rename", "replace", "merge") 
                 }
-        )
-        return res   
+        ) 
     
     except Exception as e:
         raise RuntimeError(f"WAAPI error: {e}")
