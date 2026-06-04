@@ -3284,6 +3284,7 @@ def set_rtpc_curve(
         raise WwiseValidationError("object_path must be a non-empty string")
     if not isinstance(property_name, str) or not property_name.strip():
         raise WwiseValidationError("property_name must be a non-empty string")
+    _reject_at_prefixed(property_name)
     if not isinstance(control_input_ref, str) or not control_input_ref.strip():
         raise WwiseValidationError("control_input_ref must be a non-empty string")
     if not points:
