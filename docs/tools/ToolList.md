@@ -247,11 +247,19 @@ Lists all game objects currently registered in the Wwise session.
 Posts a Wwise event by name on a specified game object after an optional delay (milliseconds).  
 If no game object is given, it posts to the global `Global` game object. If the game object doesn’t exist, it is created automatically.
 
+**Arguments**
+
+- `event_name: str` — Wwise event name to post.
+- `game_obj_name: str` — Target game object name (use `"Global"` for 2D / ambience events).
+- `delay_ms: int` — Delay before the soundengine posts the event. `0` means post immediately.
+- `wait: bool = False` — Reply mode. `False` (default) fire-and-forget: returns as soon as the dispatcher enqueues the call. `True` synchronous: blocks on the WAAPI reply queue, which is useful for serializing a batch of posts. When combined with `delay_ms > 0`, the reply timeout is auto-extended to cover the scheduled future dispatch, so delayed synchronous posts do not spuriously time out.
+
 **Example prompts**
 
 - “Post the `Play_Ambience_Forest` event on the `Global` game object immediately.”
 - “Post `Play_Footsteps_Grass` on the `Player` game object with a delay of 500 ms.”
 - “Trigger `Stop_All_Music` on `Global` right now.”
+- “Post `Play_Stinger` on `Global` and wait for the WAAPI reply before issuing the next event (`wait=True`).”
 
 ---
 
