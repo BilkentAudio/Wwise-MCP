@@ -980,6 +980,38 @@ def delete_object(object_ref: str) -> dict:
         logger.exception("Failed to delte object")
         raise 
 
+
+def remote_get_connection_status(*, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.remote_get_connection_status(timeout=timeout)
+    except Exception:
+        logger.exception("Failed to get remote connection status.")
+        raise
+
+
+def remote_get_available_consoles(*, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.remote_get_available_consoles(timeout=timeout)
+    except Exception:
+        logger.exception("Failed to get available consoles.")
+        raise
+
+
+def remote_connect(host: str, *, app_name: str | None = None, command_port: int | None = None, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.remote_connect(host, app_name=app_name, command_port=command_port, timeout=timeout)
+    except Exception:
+        logger.exception("Failed to connect to remote sound engine.")
+        raise
+
+
+def remote_disconnect(*, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.remote_disconnect(timeout=timeout)
+    except Exception:
+        logger.exception("Failed to disconnect from remote sound engine.")
+        raise
+
 #==============================================================================
 #                            Function Dictionary
 #==============================================================================
@@ -989,7 +1021,38 @@ class Command:
     func: callable
     doc: str
 
+
 COMMANDS: dict[str, Command] = {
+    "remote_get_connection_status" : Command(
+        func=remote_get_connection_status,
+        doc="Retrieve the Wwise Authoring -> Sound Engine remote connection status via ak.wwise.core.remote.getConnectionStatus. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless WwiseConsole waapi-server cannot serve it. "
+            "Args: None. Returns dict {'isConnected': bool, 'status': str, 'console': {...} (present only when connected)}. "
+            "Use as a gate: assert isConnected before profiler_start_capture so the WAAPI session is the capture authority (avoids WAAPI-vs-UI capture-stream divergence)."
+    ),
+    "remote_get_available_consoles" : Command(
+        func=remote_get_available_consoles,
+        doc="List all consoles (Sound Engine instances) available to connect to (via ak.wwise.core.remote.getAvailableConsoles). "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires Authoring with a UI context, not a headless waapi-server. "
+            "Args: None. Returns dict {'consoles': [{'name','platform','customPlatform','host','appName','commandPort'}, ...]}. "
+            "Feed host + appName (+ commandPort) into remote_connect to target a specific instance."
+    ),
+    "remote_connect" : Command(
+        func=remote_connect,
+        doc="Connect Wwise Authoring to a running Sound Engine instance or a saved .prof capture file. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless waapi-server cannot serve it. "
+            "Args: host: str (computer name / IPv4 / IP:PORT / full path to a .prof file; '127.0.0.1' for localhost), "
+            "app_name: str|None=None (Application Name from remote_get_available_consoles to pick one of several instances), "
+            "command_port: int|None=None (uint16; requires app_name). The schema's 'notificationPort' arg is 'Unused' and is not exposed. "
+            "Returns empty dict on success."
+    ),
+    "remote_disconnect" : Command(
+        func=remote_disconnect,
+        doc="Disconnect Wwise Authoring from the connected Sound Engine. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine). Distinct from disconnect_from_wwise_client (which closes the WAAPI/WAMP socket); "
+            "this severs Authoring's remote connection while the WAAPI socket stays open. "
+            "Args: None. Returns empty dict on success."
+    ),
     "connect_to_wwise" : Command(
         func=connect_to_wwise,
         doc="Attempts to reconnect to the currently active wwise session."
