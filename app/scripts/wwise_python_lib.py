@@ -3083,15 +3083,60 @@ def profiler_get_cursor_time(cursor: str = "capture") -> dict:
     return _require_non_none(response, "ak.wwise.core.profiler.getCursorTime")
 
 
-_PROFILER_DATA_TYPES = frozenset({
+_PROFILER_DATA_TYPES_2024_1 = frozenset({
     "cpu", "memory", "stream", "voices", "listener",
     "obstructionOcclusion", "markersNotification", "soundbanks",
     "loadedMedia", "preparedObjects", "preparedGameSyncs",
     "interactiveMusic", "streamingDevice", "meter", "auxiliarySends",
     "apiCalls", "spatialAudio", "spatialAudioRaycasting",
     "voiceInspector", "audioObjects", "gameSyncs",
-    "customerSupportData",
 })
+
+
+_PROFILER_DATA_TYPE_MIN_VERSION = {
+    "customerSupportData": (2025, 1),
+}
+
+
+_PROFILER_DATA_TYPES = (
+    _PROFILER_DATA_TYPES_2024_1
+    | frozenset(_PROFILER_DATA_TYPE_MIN_VERSION)
+)
+
+
+def _get_wwise_year_major() -> tuple[int, int]:
+    response = _require_non_none(
+        waapi_call("ak.wwise.core.getInfo", {}),
+        "ak.wwise.core.getInfo",
+    )
+    version = response.get("version", {})
+    try:
+        return int(version["year"]), int(version["major"])
+    except (KeyError, TypeError, ValueError) as e:
+        raise WwiseValidationError(
+            f"Could not determine connected Wwise version from getInfo response: {version!r}"
+        ) from e
+
+
+def _validate_profiler_data_type_versions(payload: list[dict]) -> None:
+    requested_versioned = sorted(
+        {
+            entry["dataType"]
+            for entry in payload
+            if entry["dataType"] in _PROFILER_DATA_TYPE_MIN_VERSION
+        }
+    )
+    if not requested_versioned:
+        return
+
+    current = _get_wwise_year_major()
+    for data_type in requested_versioned:
+        minimum = _PROFILER_DATA_TYPE_MIN_VERSION[data_type]
+        if current < minimum:
+            raise WwiseValidationError(
+                f"{data_type!r} requires Wwise {minimum[0]}.{minimum[1]}+; "
+                f"connected Wwise is {current[0]}.{current[1]}"
+            )
 
 
 def profiler_enable_data(data_types: list) -> dict:
@@ -3114,6 +3159,10 @@ def profiler_enable_data(data_types: list) -> dict:
     ----------
     data_types : list[str | tuple[str, bool] | list]
         Items from the profilerDataType enum (see _PROFILER_DATA_TYPES).
+        'customerSupportData' is available on Wwise 2025.1+ only; when
+        requested, this wrapper checks ak.wwise.core.getInfo before sending
+        enableProfilerData so Wwise 2024.1 sessions fail with a clear
+        validation error instead of a WAAPI enum error.
 
     Returns
     -------
@@ -3149,6 +3198,8 @@ def profiler_enable_data(data_types: list) -> dict:
         if enable is not None:
             entry["enable"] = enable
         payload.append(entry)
+
+    _validate_profiler_data_type_versions(payload)
 
     try:
         response = waapi_call(
