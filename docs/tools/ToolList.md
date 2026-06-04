@@ -441,3 +441,109 @@ Returns a help string listing WAAPI property identifiers and valid value types f
 - “Give me a reference of all properties I can set on a Bus.”
 
 ---
+
+### `add_effect_to_object`
+
+**Description**  
+Insert an Effect or Effect ShareSet reference into the `@Effects` list of a Bus, Actor-Mixer, or Sound via `ak.wwise.core.object.set`. WAAPI has no insert-at-index; supply the full ordered list with `list_mode='replaceAll'` if specific slot ordering is required.
+
+**Arguments**
+
+- `object_path: str` — Path or GUID of the host object (Bus / Actor-Mixer / Sound).
+- `effect_ref: str` — Path or GUID of an existing Effect or ShareSet to insert.
+- `list_mode: str = 'append'` — `'append'` adds a new EffectSlot at the end; `'replaceAll'` replaces the entire `@Effects` list with the supplied entry.
+
+**Example prompts**
+
+- “Append the `\Effects\Default Work Unit\Spatializers\SteamAudio` ShareSet to the `\Master-Mixer Hierarchy\Master Audio Bus\SFX` bus's effect chain.”
+- “Replace all effects on `\Actor-Mixer Hierarchy\SFX\Ambience` with the `\Effects\Default Work Unit\Reverbs\RoomReverb` ShareSet (`list_mode='replaceAll'`).”
+
+---
+
+### `create_effect_share_set`
+
+**Description**
+Creates a new Effect ShareSet (Custom Effect) under a parent Work Unit or folder via `ak.wwise.core.object.set`. Plug-in `classId` values are defined by the Wwise plug-in (see WAAPI `wobjects_index`); the caller supplies the value. Pairs with `add_effect_to_object` for attaching the new ShareSet to a Bus or Actor-Mixer.
+
+**Arguments**
+
+- `parent_path: str` — Project path of the parent Work Unit or folder (typically under `\Effects\Default Work Unit`).
+- `name: str` — Name of the new ShareSet.
+- `class_id: int` — Plug-in classId (WAAPI unsigned 32-bit range `[0, 0xFFFFFFFF]`).
+- `properties: dict | None` — Optional initial property values; each key becomes an `@<Key>` accessor on the new Effect.
+- `on_name_conflict: str = 'rename'` — One of `'fail' | 'rename' | 'replace' | 'merge'`.
+
+**Returns**
+
+The created ShareSet, unwrapped from the WAAPI response: `{"id": "<guid>", "name": "<resolved name>", "path": "<project path>", "type": "Effect"}` (fields requested via `options.return`). The raw WAAPI response nests the new ShareSet at `response["objects"][0]["children"][0]`; this wrapper unwraps it so the plan executor's `$last.id` / `$last.path` resolve directly to the new ShareSet.
+
+**Example prompts**
+
+- “Create a Steam Audio Spatializer Effect ShareSet named `SteamAudio_Spatializer` under `\Effects\Default Work Unit\Spatializers` with `class_id=<plug-in classId>`.”
+- “Create a Wwise Reverb ShareSet named `RoomReverb` under `\Effects\Default Work Unit\Reverbs`.”
+
+---
+
+### `set_plugin_property`
+
+**Description**
+Set an Effect plug-in property via `ak.wwise.core.object.set` using the `@<PropertyName>` accessor. The older `setProperty` endpoint silently rejects plug-in-defined properties (Steam Audio Spatializer `Reflections` / `Pathing` / `AirAbsorption` / `Occlusion` / `Transmission`, Wwise Reverb plug-in params, etc.); this tool routes through `object.set` so those writes actually persist. Built-in object properties continue to be set via `set_object_property`.
+
+**Arguments**
+
+- `object_path: str` — Project path or GUID of the object whose property is being set.
+- `property_name: str` — WAAPI property name *without* the leading `@` (e.g. `'Reflections'`). The wrapper adds the `@` prefix.
+- `value: int | bool | float | str` — New value. `None` is rejected.
+- `platform: str | None` — Optional platform unique name or GUID. When omitted, the change applies to all linked platforms.
+
+**Example prompts**
+
+- “Set the Steam Audio Spatializer `Reflections` toggle on the `\Effects\Default Work Unit\Spatializers\SteamAudio` ShareSet to `False`.”
+- “Set the `AirAbsorption` plug-in property of the `SteamAudio_Spatializer` ShareSet to `True`.”
+
+---
+
+### `set_rtpc_curve`
+
+**Description**
+Bind a ControlInput (Game Parameter, Modulator, or MIDI) to a target property on an object via the `@RTPC` list, defining the curve with the given breakpoint array. The target property can be any settable property including Effect plug-in properties (Steam Audio Spatializer `Reflections_MixLevel` etc.) that the older `setProperty` endpoint silently rejects. Distinct from `set_attenuation_curve`, which targets Attenuation-only curve types.
+
+**Arguments**
+
+- `object_path: str` — Project path or GUID of the object whose RTPC binding is being set.
+- `property_name: str` — WAAPI property name *without* the leading `@` (e.g. `'Reflections_MixLevel'`).
+- `control_input_ref: str` — Path or GUID of an existing Game Parameter / Modulator / MIDI source.
+- `points: list[dict]` — Non-empty list of breakpoint dicts. Each point: `{"x": number, "y": number, "shape": str}`. `x` and `y` must be finite numbers (`bool`, `NaN`, `Infinity` rejected). `shape` is one of `'Constant'`, `'Linear'`, `'Log3'`, `'Log2'`, `'Log1'`, `'InvertedSCurve'`, `'SCurve'`, `'Exp1'`, `'Exp2'`, `'Exp3'`.
+- `platform: str | None` — Optional platform unique name or GUID. When omitted, the binding applies to all linked platforms.
+
+**Example prompts**
+
+- “Bind the `\Game Parameters\Reflections_Mute` RTPC to the `Reflections_MixLevel` property of the `SteamAudio_Spatializer` ShareSet with a two-point linear curve `(0, 0)` → `(1, 1)`.”
+- “Set an exponential RTPC curve for the `\Game Parameters\Distance` GP to drive the `OutputBusVolume` of `\Actor-Mixer Hierarchy\SFX\Ambience`.”
+
+---
+
+### `create_source_plugin`
+
+**Description**
+Create a Source plug-in (Sine, Tone Generator, Silence, SoundSeed Air, etc.) as a child of a Sound or Voice object via `ak.wwise.core.object.set`. Unblocks Sine/Tone-based diagnostic and smoke-test automation that previously required manual GUI source swaps. Pre-PR `create_objects` `child_types` excluded Source plug-ins.
+
+**Arguments**
+
+- `parent_path: str` — Path or GUID of the parent Sound or Voice object.
+- `name: str` — Name of the new Source child.
+- `class_id: int` — Plug-in classId (WAAPI unsigned 32-bit range `[0, 0xFFFFFFFF]`, see WAAPI `wobjects_index`).
+- `properties: dict | None` — Optional initial property values; each key becomes an `@<Key>` accessor on the new Source.
+- `language: str | None` — Required for Voice parents (e.g. `'English(US)'`, `'Japanese'`). When supplied, the child is created with `type='Source'` per the WAAPI Voice schema. Omit for Sound parents: the child then uses `type='SourcePlugin'` per the WAAPI Sound schema.
+- `on_name_conflict: str = 'rename'` — One of `'fail' | 'rename' | 'replace' | 'merge'`.
+
+**Returns**
+
+The created Source, unwrapped from the WAAPI response: `{"id": "<guid>", "name": "<resolved name>", "path": "<project path>", "type": "Source" | "SourcePlugin"}` (fields requested via `options.return`). The raw WAAPI response nests the new Source at `response["objects"][0]["children"][0]`; this wrapper unwraps it so the plan executor's `$last.id` / `$last.path` resolve directly to the new Source.
+
+**Example prompts**
+
+- “Create a Sine source named `DiagTone_1k` under `\Actor-Mixer Hierarchy\Diagnostics\SineSound` with the Sine plug-in `class_id`.”
+- “Create a Tone Generator source named `Smoke_Tone` under the Sound `\Actor-Mixer Hierarchy\Smoke\TestSound`.”
+
+---

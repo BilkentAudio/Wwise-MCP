@@ -989,7 +989,141 @@ class Command:
     func: callable
     doc: str
 
+
+
+def add_effect_to_object(
+    object_path: str,
+    effect_ref: str,
+    *,
+    list_mode: str = "append",
+) -> dict:
+
+    try:
+        return WwisePythonLibrary.add_effect_to_object(
+            object_path,
+            effect_ref,
+            list_mode=list_mode,
+        )
+    except Exception:
+        logger.exception("Failed to add Effect to object @Effects list.")
+        raise
+
+
+def create_effect_share_set(
+    parent_path: str,
+    name: str,
+    class_id: int,
+    *,
+    properties: dict | None = None,
+    on_name_conflict: str = "rename",
+) -> dict:
+
+    try:
+        return WwisePythonLibrary.create_effect_share_set(
+            parent_path,
+            name,
+            class_id,
+            properties=properties,
+            on_name_conflict=on_name_conflict,
+        )
+    except Exception:
+        logger.exception("Failed to create Effect ShareSet.")
+        raise
+
+
+def set_plugin_property(
+    object_path: str,
+    property_name: str,
+    value: int | bool | float | str,
+    *,
+    platform: str | None = None,
+) -> dict:
+
+    try:
+        return WwisePythonLibrary.set_plugin_property(
+            object_path,
+            property_name,
+            value,
+            platform=platform,
+        )
+    except Exception:
+        logger.exception("Failed to set plug-in property via object.set.")
+        raise
+
+
+def set_rtpc_curve(
+    object_path: str,
+    property_name: str,
+    control_input_ref: str,
+    points: list[dict],
+    *,
+    platform: str | None = None,
+) -> dict:
+
+    try:
+        return WwisePythonLibrary.set_rtpc_curve(
+            object_path,
+            property_name,
+            control_input_ref,
+            points,
+            platform=platform,
+        )
+    except Exception:
+        logger.exception("Failed to set RTPC curve via object.set.")
+        raise
+
+
+def create_source_plugin(
+    parent_path: str,
+    name: str,
+    class_id: int,
+    *,
+    properties: dict | None = None,
+    language: str | None = None,
+    on_name_conflict: str = "rename",
+) -> dict:
+
+    try:
+        return WwisePythonLibrary.create_source_plugin(
+            parent_path,
+            name,
+            class_id,
+            properties=properties,
+            language=language,
+            on_name_conflict=on_name_conflict,
+        )
+    except Exception:
+        logger.exception("Failed to create Source plug-in.")
+        raise
+
+
 COMMANDS: dict[str, Command] = {
+    "create_effect_share_set" : Command(
+        func=create_effect_share_set,
+        doc="Create a Custom Effect or Effect ShareSet under parent_path (typically '\\Effects\\Default Work Unit\\<folder>') with the given plug-in classId and optional initial properties. "
+            "Args: parent_path : str, name : str, class_id : int, properties : dict | None = None, on_name_conflict : str = 'rename'. Returns dict."
+    ),
+    "add_effect_to_object" : Command(
+        func=add_effect_to_object,
+        doc="Insert an Effect/ShareSet reference into the @Effects list of a Bus, ActorMixer, or Sound via ak.wwise.core.object.set. "
+            "Args: object_path : str, effect_ref : str, list_mode : str = 'append' (or 'replaceAll'). Returns dict."
+    ),
+    "set_plugin_property" : Command(
+        func=set_plugin_property,
+        doc="Set an Effect plug-in property via ak.wwise.core.object.set using the @<PropertyName> accessor. Use for plug-in-defined properties that the older setProperty silently rejects (Steam Audio Spatializer Reflections / Pathing / AirAbsorption / Occlusion / Transmission, Wwise Reverb plug-in params, etc.). "
+            "Args: object_path : str, property_name : str (without leading '@'), value : int|bool|float|str, platform : str | None = None. Returns dict."
+    ),
+    "set_rtpc_curve" : Command(
+        func=set_rtpc_curve,
+        doc="Bind a ControlInput (Game Parameter / Modulator / MIDI) to a target property on an object via the @RTPC list with a breakpoint array. Target property may be an Effect plug-in property that older endpoints silently reject. Distinct from set_attenuation_curve. "
+            "Args: object_path : str, property_name : str (without leading '@'), control_input_ref : str, points : list[dict], platform : str | None = None. "
+            "Each point is {'x': number, 'y': number, 'shape': str}. Shape: Constant|Linear|Log1|Log2|Log3|InvertedSCurve|SCurve|Exp1|Exp2|Exp3. Returns dict."
+    ),
+    "create_source_plugin" : Command(
+        func=create_source_plugin,
+        doc="Create a Source plug-in (Sine, Tone Generator, Silence, SoundSeed Air, etc.) as a child of a Sound or Voice object via ak.wwise.core.object.set. Unblocks Sine/Tone-based diagnostic / smoke-test automation. Returns the created Source unwrapped (id/name/path/type via options.return) so $last.id and $last.path resolve to the new Source. "
+            "Args: parent_path : str, name : str, class_id : int (WAAPI uint32), properties : dict | None = None, language : str | None = None (required for Voice parents; omit for Sound parents), on_name_conflict : str = 'rename' ('fail'|'rename'|'replace'|'merge'). Returns dict."
+    ),
     "connect_to_wwise" : Command(
         func=connect_to_wwise,
         doc="Attempts to reconnect to the currently active wwise session."
