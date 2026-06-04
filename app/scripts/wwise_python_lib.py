@@ -38,7 +38,44 @@ def waapi_call(
     return WwiseSession.waapi_call(uri, args or {}, options=options, **kw)
 
 # ==============================================================================
-#                               Soundbank 
+#                          Shared validation helpers
+# ==============================================================================
+
+def _require_non_none(response, operation, **details):
+    """WAAPI failures raise (the client runs with allow_exception=True), so a
+    None response is an anomaly. Surface it as an error instead of returning a
+    fake-empty success. Mirrors the inline None->raise guard in get_project_info."""
+    if response is None:
+        raise WwiseApiError(
+            f"WAAPI returned None for {operation}",
+            operation=operation,
+            details=details or None,
+        )
+    return response
+
+
+def _validate_timeout_seconds(timeout: float, field_name: str = "timeout") -> float:
+    """Reject zero, negative, non-finite, or non-numeric timeout values.
+    WAAPI calls with timeout <= 0 fail immediately; non-finite (inf, nan) causes
+    undefined wait behavior in the dispatcher."""
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+        raise WwiseValidationError(
+            f"{field_name} must be a number (seconds), got {type(timeout).__name__}"
+        )
+    timeout_f = float(timeout)
+    if not math.isfinite(timeout_f) or timeout_f <= 0:
+        raise WwiseValidationError(
+            f"{field_name} must be a finite number > 0, got {timeout!r}"
+        )
+    return timeout_f
+
+
+# object.set listMode values shared by the playlist / effect-list wrappers.
+_OBJECT_SET_LIST_MODES = frozenset({"replaceAll", "append"})
+
+
+# ==============================================================================
+#                               Soundbank
 # ==============================================================================
 
 def get_project_info() -> dict:
@@ -53,15 +90,13 @@ def get_project_info() -> dict:
     """
     try:
         response = waapi_call("ak.wwise.core.getProjectInfo", {})
-        
-        if response is None:
-            raise WwiseApiError(
-                "WAAPI returned None when fetching project info (no project may be open)",
-                operation="ak.wwise.core.getProjectInfo"
-            )
-        
-        return response
-    
+
+        return _require_non_none(
+            response,
+            "ak.wwise.core.getProjectInfo",
+            hint="no project may be open",
+        )
+
     except WwisePyLibError:
         raise
     
