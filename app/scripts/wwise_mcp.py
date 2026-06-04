@@ -542,9 +542,11 @@ def find_references_to(
     
 def post_event(
     event_name: str,
-    game_obj_name: str,
-    delay_ms: int,
+    game_obj_name: str | None = None,
+    delay_ms: int = 0,
     wait: bool = False,
+    *,
+    go_name: str | None = None,
 )-> int:
 
     try:
@@ -553,6 +555,12 @@ def post_event(
 
         if delay_ms < 0:
             raise ValueError("Delay amount cannot be negative when posting an event.")
+
+        if game_obj_name is not None and go_name is not None:
+            raise ValueError("Pass either game_obj_name or go_name, not both.")
+
+        if game_obj_name is None:
+            game_obj_name = go_name
 
         return WwisePythonLibrary.post_event(event_name, game_obj_name, delay_ms, wait)
 
