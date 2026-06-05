@@ -2987,6 +2987,203 @@ def toggle_layout(request_layout : str)->dict:
     
     return waapi_call("ak.wwise.ui.layout.switchLayout", {"name": request_layout})
 
+def remote_get_connection_status(*, timeout: float = 5.0) -> dict:
+    """
+    Retrieve the Wwise Authoring -> Sound Engine remote connection status.
+
+    No args. Returns isConnected + status, plus an optional "console" block
+    describing the connected remote process.
+
+    Endpoint restriction
+    --------------------
+    ak.wwise.core.remote.* is restrict:["userInterface"] (NOT commandLine).
+    Requires a running Wwise Authoring instance WITH a UI context; a headless
+    WwiseConsole waapi-server cannot serve this endpoint.
+
+    Returns
+    -------
+    dict
+        Raw WAAPI response:
+        {"isConnected": bool, "status": str,
+         "console": {"name", "platform", "customPlatform", "host", "appName"}}.
+        The "console" block is present only when connected.
+    """
+    timeout = _validate_timeout_seconds(timeout)
+    try:
+        response = waapi_call(
+            "ak.wwise.core.remote.getConnectionStatus",
+            {},
+            timeout=timeout,
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to get remote connection status: {e}",
+            operation="ak.wwise.core.remote.getConnectionStatus",
+            details={"error_type": type(e).__name__, "timeout": timeout},
+        )
+    return _require_non_none(response, "ak.wwise.core.remote.getConnectionStatus")
+
+
+def remote_get_available_consoles(*, timeout: float = 5.0) -> dict:
+    """
+    List all consoles (Sound Engine instances) available to connect to.
+
+    No args. Each console carries name/platform/customPlatform/host/appName/
+    commandPort - feed host + appName (+ commandPort) into remote_connect to
+    target a specific instance.
+
+    Endpoint restriction
+    --------------------
+    ak.wwise.core.remote.* is restrict:["userInterface"] (NOT commandLine), as
+    for remote_get_connection_status. Requires Authoring with a UI context; not
+    servable by a headless waapi-server.
+
+    Returns
+    -------
+    dict
+        Raw WAAPI response: {"consoles": [{...console}, ...]}.
+    """
+    timeout = _validate_timeout_seconds(timeout)
+    try:
+        response = waapi_call(
+            "ak.wwise.core.remote.getAvailableConsoles",
+            {},
+            timeout=timeout,
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to get available consoles: {e}",
+            operation="ak.wwise.core.remote.getAvailableConsoles",
+            details={"error_type": type(e).__name__, "timeout": timeout},
+        )
+    return _require_non_none(response, "ak.wwise.core.remote.getAvailableConsoles")
+
+
+def remote_connect(
+    host: str,
+    *,
+    app_name: str | None = None,
+    command_port: int | None = None,
+    timeout: float = 5.0,
+) -> dict:
+    """
+    Connect Wwise Authoring to a running Sound Engine instance or a saved
+    .prof capture file.
+
+    Parameters
+    ----------
+    host : str
+        Computer name, IPv4, IP:PORT pair, or a full path to a saved .prof
+        capture. Use "127.0.0.1" for localhost. (schema: required)
+    app_name : str | None
+        Application Name (from remote_get_available_consoles) used to select a
+        specific instance when more than one Sound Engine is running.
+    command_port : int | None
+        uint16 command port to disambiguate instances sharing an app_name. Per
+        the WAAPI schema, command_port requires app_name to also be set.
+    timeout : float
+        WAAPI reply timeout. Default 5.0s (a remote handshake can exceed the
+        WwiseSession 1.0s default).
+
+    Endpoint restriction
+    --------------------
+    userInterface-only (NOT commandLine; see remote_get_connection_status).
+    Requires Authoring with a UI context; not servable by a headless
+    waapi-server. The schema's "notificationPort" arg is documented "Unused"
+    and is intentionally NOT exposed by this wrapper.
+
+    Returns
+    -------
+    dict
+        Empty dict on success.
+    """
+    timeout = _validate_timeout_seconds(timeout)
+    if not isinstance(host, str) or not host.strip():
+        raise WwiseValidationError("host must be a non-empty string")
+    host = host.strip()
+    if app_name is not None:
+        if not isinstance(app_name, str) or not app_name.strip():
+            raise WwiseValidationError("app_name must be a non-empty string when provided")
+        app_name = app_name.strip()
+    if command_port is not None:
+        if isinstance(command_port, bool) or not isinstance(command_port, int):
+            raise WwiseValidationError("command_port must be an int")
+        if command_port < 0 or command_port > 0xFFFF:
+            raise WwiseValidationError(
+                f"command_port must be a uint16 (0..65535), got {command_port}"
+            )
+        if app_name is None:
+            raise WwiseValidationError(
+                "command_port requires app_name (schema: when using commandPort you must also provide appName)"
+            )
+
+    args: dict = {"host": host}
+    if app_name is not None:
+        args["appName"] = app_name
+    if command_port is not None:
+        args["commandPort"] = command_port
+
+    try:
+        response = waapi_call(
+            "ak.wwise.core.remote.connect",
+            args,
+            timeout=timeout,
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to connect to remote sound engine: {e}",
+            operation="ak.wwise.core.remote.connect",
+            details={
+                "error_type": type(e).__name__,
+                "host": host,
+                "app_name": app_name,
+                "command_port": command_port,
+                "timeout": timeout,
+            },
+        )
+    return _require_non_none(response, "ak.wwise.core.remote.connect")
+
+
+def remote_disconnect(*, timeout: float = 5.0) -> dict:
+    """
+    Disconnect Wwise Authoring from the connected Sound Engine instance.
+
+    No args. Distinct from WwiseSession.disconnect_from_wwise_client(), which
+    closes the WAAPI/WAMP socket between this library and Authoring; this call
+    severs Authoring's *remote* connection to the game/Sound Engine while the
+    WAAPI socket stays open.
+
+    Endpoint restriction
+    --------------------
+    userInterface-only (NOT commandLine; see remote_get_connection_status).
+
+    Returns
+    -------
+    dict
+        Empty dict on success.
+    """
+    timeout = _validate_timeout_seconds(timeout)
+    try:
+        response = waapi_call(
+            "ak.wwise.core.remote.disconnect",
+            {},
+            timeout=timeout,
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to disconnect from remote sound engine: {e}",
+            operation="ak.wwise.core.remote.disconnect",
+            details={"error_type": type(e).__name__, "timeout": timeout},
+        )
+    return _require_non_none(response, "ak.wwise.core.remote.disconnect")
 
 def _reject_at_prefixed(name):
     """Property names are passed without the leading '@'; the wrapper adds it.
