@@ -809,17 +809,18 @@ def list_all_event_names(
 def post_event(
   event_name: str,
   game_obj: str,
-  delay_ms: int
+  delay_ms: int,
+  wait: bool = False,
 ) -> None:
 
   if delay_ms < 0:
     raise ValueError("delay_ms must be >= 0")
-  
-  if not game_obj: 
+
+  if not game_obj:
     game_obj = DEFAULT_GAME_OBJ_NAME
 
   ensure_game_obj(game_obj)
-  
+
   if delay_ms < 0:
     raise ValueError("delay_ms must be >= 0")
   if not game_obj:
@@ -827,11 +828,21 @@ def post_event(
 
   gid = ensure_game_obj(game_obj)  # your existing registrar / resolver
 
+  delay_s = delay_ms / 1000.0
+  call_kwargs: dict[str, Any] = {
+    "due_in": delay_s,
+    "wait": wait,
+  }
+  # Default reply timeout (WwiseSession._DEFAULT_TIMEOUT = 1.0s) is shorter than
+  # any non-trivial delay, so wait=True + delay_ms>0 would otherwise time out
+  # before the scheduled dispatch fires. Extend timeout to cover the schedule.
+  if wait and delay_s > 0:
+    call_kwargs["timeout"] = WwiseSession._DEFAULT_TIMEOUT + delay_s
+
   waapi_call(
     "ak.soundengine.postEvent",
     {"event": event_name, "gameObject": gid},
-    due_in=delay_ms / 1000.0,   # schedule via dispatcher
-    wait=False                  # fire-and-forget
+    **call_kwargs,
     )
 
 def stop_event(
@@ -2148,7 +2159,8 @@ def assign_child_to_blend_track(
 
 def assign_child_to_random_sequence_playlist(
     container_path: str,
-    child_paths: list[str]
+    child_paths: list[str],
+    list_mode: str = "replaceAll",
 ) -> dict:
 
     if not container_path:
@@ -2156,6 +2168,11 @@ def assign_child_to_random_sequence_playlist(
 
     if not child_paths:
         raise ValueError("child_paths must be a non-empty list of Wwise object paths or GUIDs.")
+
+    if list_mode not in _OBJECT_SET_LIST_MODES:
+        raise WwiseValidationError(
+            f"list_mode must be one of {sorted(_OBJECT_SET_LIST_MODES)}, got {list_mode!r}"
+        )
 
     args = {
         "objects": [
@@ -2172,8 +2189,7 @@ def assign_child_to_random_sequence_playlist(
             }
         ],
         "onNameConflict": "merge",
-        "listMode": "replaceAll" 
-        # TODO: Investigate ak.wwise.core.object.set list options for playlist management assignment behavior
+        "listMode": list_mode,
     }
 
     return waapi_call("ak.wwise.core.object.set", args)

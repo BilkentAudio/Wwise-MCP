@@ -541,21 +541,30 @@ def find_references_to(
         raise
     
 def post_event(
-    event_name: str, 
-    go_name: str, 
-    delay_ms: int
+    event_name: str,
+    game_obj_name: str | None = None,
+    delay_ms: int = 0,
+    wait: bool = False,
+    *,
+    go_name: str | None = None,
 )-> int:
-    
-    try: 
-        if not event_name: 
-           raise ValueError("Pass in a non empty event name when posting an event.")
-       
-        if delay_ms < 0:
-            raise ValueError("Delay amount cannot be negative when posting an event.") 
 
-        return WwisePythonLibrary.post_event(event_name, go_name, delay_ms)
-    
-    except Exception: 
+    try:
+        if not event_name:
+           raise ValueError("Pass in a non empty event name when posting an event.")
+
+        if delay_ms < 0:
+            raise ValueError("Delay amount cannot be negative when posting an event.")
+
+        if game_obj_name is not None and go_name is not None:
+            raise ValueError("Pass either game_obj_name or go_name, not both.")
+
+        if game_obj_name is None:
+            game_obj_name = go_name
+
+        return WwisePythonLibrary.post_event(event_name, game_obj_name, delay_ms, wait)
+
+    except Exception:
         logger.exception("Failed to post event %r", event_name)
         raise
 
@@ -924,13 +933,15 @@ def assign_child_to_blend_track(
 
 def assign_child_to_random_sequence_playlist(
     container_path: str,
-    child_paths: list[str]
+    child_paths: list[str],
+    list_mode: str = "replaceAll",
 ) -> None:
 
     try:
         WwisePythonLibrary.assign_child_to_random_sequence_playlist(
             container_path,
-            child_paths
+            child_paths,
+            list_mode,
         )
     except Exception:
         logger.exception("Failed to assign children to random/sequence playlist.")
@@ -1351,13 +1362,16 @@ COMMANDS: dict[str, Command] = {
             "Args: object_ref : str, return_fields : list[str] | None = None. Returns list[dict]"
     ),
     "post_event" : Command(
-        func=post_event, 
+        func=post_event,
         doc="Posts the event by its name on the game object specified by its name after a delay in milliseconds"
             "If no game object is specified, the event will be posted on the 'Global' game object which should be used for 2D sounds like Ambiences."
             "If the specified game object does not exist, it will be created automatically at time of call."
             "If user does not specify delay_ms, assume post immediately so set delay_ms = 0."
             "Types of events : Play, Stop, Pause, Break, Seek"
-            "Args: event_name: str, game_obj_name : str, delay_ms : int. Returns None"
+            "Args: event_name: str, game_obj_name: str, delay_ms: int, "
+            "wait: bool = False (False = fire-and-forget; True = block on the WAAPI reply queue, "
+            "useful for serializing a batch of posts. Reply timeout is auto-extended when delay_ms > 0). "
+            "Returns None"
     ),
     "set_rtpc" : Command(
         func=set_rtpc, 
@@ -1525,9 +1539,12 @@ COMMANDS: dict[str, Command] = {
     "assign_child_to_random_sequence_playlist": Command(
         func=assign_child_to_random_sequence_playlist,
         doc="Assigns child objects to the playlist of a Random or Sequence Container."
-            "Args: container_path: str, child_paths: list[str]. "
+            "Args: container_path: str, child_paths: list[str], "
+            "list_mode: str = 'replaceAll' (accepted values: 'replaceAll' | 'append'). "
             "Children must already exist under the RandomSequenceContainer hierarchy. "
-            "Note: replaces exsiting playlist (listMode='replaceAll'). Returns None."
+            "list_mode='replaceAll' overwrites the existing playlist; "
+            "list_mode='append' adds child_paths to the end of the current playlist. "
+            "Returns None."
     ),
     "retrieve_selected_objs" : Command(
         func=get_selected_objects, 
