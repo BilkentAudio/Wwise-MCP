@@ -2988,6 +2988,517 @@ def toggle_layout(request_layout : str)->dict:
     return waapi_call("ak.wwise.ui.layout.switchLayout", {"name": request_layout})
 
 
+def _reject_at_prefixed(name):
+    """Property names are passed without the leading '@'; the wrapper adds it.
+    A caller-supplied '@' would produce '@@Name'. Also guards type, because the
+    create_* loops pass dict keys straight in (a non-str key would otherwise
+    blow up on .startswith with a raw AttributeError)."""
+    if not isinstance(name, str) or not name.strip():
+        raise WwiseValidationError(f"property name must be a non-empty string, got {name!r}")
+    if name.startswith("@"):
+        raise WwiseValidationError(
+            f"property name must not include the leading '@' (got {name!r}); the wrapper adds it"
+        )
+
+
+_OBJECT_SET_NAME_CONFLICT_MODES = frozenset({"fail", "rename", "replace", "merge"})
+
+
+def add_effect_to_object(
+    object_path: str,
+    effect_ref: str,
+    *,
+    list_mode: str = "append",
+) -> dict:
+    """
+    Insert an Effect/ShareSet reference into the @Effects list of a
+    Bus, ActorMixer, or Sound via ak.wwise.core.object.set.
+
+    Parameters
+    ----------
+    object_path : str
+        Path/GUID of the host object (Bus, ActorMixer, etc).
+    effect_ref : str
+        Path or GUID of an existing Effect or ShareSet to insert.
+    list_mode : str
+        'append' (default) appends a new EffectSlot at the end.
+        'replaceAll' replaces the entire @Effects list with this entry.
+
+    WAAPI has no insert-at-index. To target a specific slot index,
+    call with list_mode='replaceAll' and supply the full ordered list
+    via a higher-level helper (out of scope here).
+
+    Returns
+    -------
+    dict
+        Raw WAAPI response from ak.wwise.core.object.set; shape
+        `{"objects": [...]}` per the WAAPI object.set schema.
+    """
+    if not isinstance(object_path, str) or not object_path.strip():
+        raise WwiseValidationError("object_path must be a non-empty string")
+    if not isinstance(effect_ref, str) or not effect_ref.strip():
+        raise WwiseValidationError("effect_ref must be a non-empty string")
+    if list_mode not in _OBJECT_SET_LIST_MODES:
+        raise WwiseValidationError(
+            f"list_mode must be one of {sorted(_OBJECT_SET_LIST_MODES)}, "
+            f"got {list_mode!r}"
+        )
+
+    args = {
+        "objects": [
+            {
+                "object": object_path,
+                "@Effects": [
+                    {"type": "EffectSlot", "name": "", "@Effect": effect_ref}
+                ],
+            }
+        ],
+        "onNameConflict": "merge",
+        "listMode": list_mode,
+    }
+
+    try:
+        response = waapi_call("ak.wwise.core.object.set", args)
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to add effect to object: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "object_path": object_path,
+                "effect_ref": effect_ref,
+                "list_mode": list_mode,
+            },
+        )
+
+    if response is None:
+        raise WwiseApiError(
+            "WAAPI returned None when adding effect to object",
+            operation="ak.wwise.core.object.set",
+            details={"object_path": object_path, "effect_ref": effect_ref},
+        )
+
+    return response
+
+
+def create_effect_share_set(
+    parent_path: str,
+    name: str,
+    class_id: int,
+    *,
+    properties: dict[str, int | bool | float | str] | None = None,
+    on_name_conflict: str = "rename",
+) -> dict:
+    """
+    Create a Custom Effect / Effect ShareSet under `parent_path` (typically
+    `\\Effects\\Default Work Unit\\<folder>`) with the given plug-in classId.
+
+    Plug-in classId values are defined by the Wwise plug-in (see WAAPI
+    `wobjects_index`). Caller supplies the value; this wrapper does not
+    look them up.
+
+    Parameters
+    ----------
+    parent_path : str
+        Project path of the parent Work Unit or Folder.
+    name : str
+        Name of the new ShareSet.
+    class_id : int
+        Plug-in classId.
+    properties : dict | None
+        Optional initial properties: each key becomes an @<Key> accessor on
+        the new Effect.
+    on_name_conflict : str
+        'fail' | 'rename' | 'replace' | 'merge'. Default 'rename'.
+
+    Returns
+    -------
+    dict
+        The created ShareSet, unwrapped from the WAAPI response. Shape:
+        `{"id": "<guid>", "name": "<resolved name>", "path": "<project path>",
+        "type": "Effect"}` (fields requested via `options.return`). The raw
+        WAAPI response from `object.set` nests the new ShareSet at
+        `response["objects"][0]["children"][0]`; this wrapper returns the
+        child directly so callers can chain off `$last.id` / `$last.path`
+        in the plan executor.
+    """
+    if not isinstance(parent_path, str) or not parent_path.strip():
+        raise WwiseValidationError("parent_path must be a non-empty string")
+    if not isinstance(name, str) or not name.strip():
+        raise WwiseValidationError("name must be a non-empty string")
+    if not isinstance(class_id, int) or isinstance(class_id, bool):
+        raise WwiseValidationError("class_id must be an int")
+    if class_id < 0 or class_id > 0xFFFFFFFF:
+        raise WwiseValidationError(
+            f"class_id must fit in WAAPI unsigned 32-bit range [0, 0xFFFFFFFF], got {class_id}"
+        )
+    if properties is not None and not isinstance(properties, dict):
+        raise WwiseValidationError("properties must be a dict if provided")
+    if on_name_conflict not in _OBJECT_SET_NAME_CONFLICT_MODES:
+        raise WwiseValidationError(
+            f"on_name_conflict must be one of {sorted(_OBJECT_SET_NAME_CONFLICT_MODES)}, "
+            f"got {on_name_conflict!r}"
+        )
+
+    child: dict = {"type": "Effect", "name": name, "classId": class_id}
+    for prop_name, prop_value in (properties or {}).items():
+        _reject_at_prefixed(prop_name)
+        child[f"@{prop_name}"] = prop_value
+
+    args = {
+        "objects": [{"object": parent_path, "children": [child]}],
+        "onNameConflict": on_name_conflict,
+    }
+
+    try:
+        response = waapi_call(
+            "ak.wwise.core.object.set",
+            args,
+            options={"return": ["id", "name", "path", "type"]},
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to create Effect ShareSet: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "parent_path": parent_path,
+                "name": name,
+                "class_id": class_id,
+            },
+        )
+
+    if response is None:
+        raise WwiseApiError(
+            "WAAPI returned None when creating Effect ShareSet",
+            operation="ak.wwise.core.object.set",
+            details={"parent_path": parent_path, "name": name},
+        )
+
+    # WAAPI mirrors the request shape: objects[0] is the parent we called
+    # object.set on, and the created ShareSet sits at objects[0].children[0].
+    # The project's $last.<attr> plan resolver only walks one dict level, so
+    # callers that chain off the response need flat fields. Unwrap the child
+    # explicitly so $last.id / $last.path resolve to the new ShareSet.
+    try:
+        created = response["objects"][0]["children"][0]
+    except (KeyError, IndexError, TypeError) as e:
+        raise WwiseApiError(
+            f"Effect ShareSet was created but the WAAPI response shape was "
+            f"unexpected (could not locate objects[0].children[0]): {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "parent_path": parent_path,
+                "name": name,
+                "raw_response": response,
+            },
+        )
+
+    return created
+
+
+def set_plugin_property(
+    object_path: str,
+    property_name: str,
+    value: int | bool | float | str,
+    *,
+    platform: str | None = None,
+) -> dict:
+    """
+    Set an Effect plug-in property via ak.wwise.core.object.set using the
+    @<PropertyName> accessor. Use this for Effect plug-in properties (Steam
+    Audio Spatializer Reflections / Pathing / AirAbsorption etc.) that the
+    older setProperty endpoint silently rejects.
+
+    Parameters
+    ----------
+    object_path : str
+        Project path or GUID of the object whose property is being set.
+    property_name : str
+        WAAPI property name *without* the leading '@' (e.g. 'Reflections').
+        The function adds the '@' prefix.
+    value : int | bool | float | str
+        The new value. None is rejected (use the existing property removal
+        endpoints if you need to clear a reference).
+    platform : str | None
+        Optional platform unique name or GUID. When omitted, the change
+        applies to all linked platforms.
+    """
+    if not isinstance(object_path, str) or not object_path.strip():
+        raise WwiseValidationError("object_path must be a non-empty string")
+    if not isinstance(property_name, str) or not property_name.strip():
+        raise WwiseValidationError("property_name must be a non-empty string")
+    _reject_at_prefixed(property_name)
+    if value is None:
+        raise WwiseValidationError("value cannot be None")
+
+    obj: dict = {"object": object_path, f"@{property_name}": value}
+    if platform is not None:
+        obj["platform"] = platform
+
+    args = {"objects": [obj], "onNameConflict": "merge"}
+
+    try:
+        response = waapi_call("ak.wwise.core.object.set", args)
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to set plug-in property: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "object_path": object_path,
+                "property_name": property_name,
+                "platform": platform,
+            },
+        )
+
+    return _require_non_none(response, "ak.wwise.core.object.set")
+
+
+_RTPC_CURVE_SHAPES = frozenset({
+    "Constant", "Linear",
+    "Log3", "Log2", "Log1",
+    "InvertedSCurve", "SCurve",
+    "Exp1", "Exp2", "Exp3",
+})
+
+
+def set_rtpc_curve(
+    object_path: str,
+    property_name: str,
+    control_input_ref: str,
+    points: list[dict],
+    *,
+    platform: str | None = None,
+) -> dict:
+    """
+    Bind a ControlInput (Game Parameter, Modulator, or MIDI) to a target
+    property on an object via the @RTPC list, defining the curve with the
+    given breakpoint array.
+
+    Each point is a dict with keys 'x', 'y', and 'shape'. Shape must be one
+    of: 'Constant', 'Linear', 'Log3', 'Log2', 'Log1', 'InvertedSCurve',
+    'SCurve', 'Exp1', 'Exp2', 'Exp3'.
+
+    The target property can be any settable property including Effect
+    plug-in properties (Steam Audio Spatializer Reflections Mix Level etc.)
+    that the older setProperty endpoint silently rejects.
+
+    Returns
+    -------
+    dict
+        Raw WAAPI response from ak.wwise.core.object.set.
+    """
+    if not isinstance(object_path, str) or not object_path.strip():
+        raise WwiseValidationError("object_path must be a non-empty string")
+    if not isinstance(property_name, str) or not property_name.strip():
+        raise WwiseValidationError("property_name must be a non-empty string")
+    _reject_at_prefixed(property_name)
+    if not isinstance(control_input_ref, str) or not control_input_ref.strip():
+        raise WwiseValidationError("control_input_ref must be a non-empty string")
+    if not points:
+        raise WwiseValidationError("points must be a non-empty list")
+
+    normalized: list[dict] = []
+    for i, p in enumerate(points):
+        if not isinstance(p, dict) or "x" not in p or "y" not in p or "shape" not in p:
+            raise WwiseValidationError(
+                f"point at index {i} must be a dict with keys 'x', 'y', 'shape'"
+            )
+        # bool is a subclass of int in Python; reject it explicitly to avoid silent True/False coords
+        for axis in ("x", "y"):
+            v = p[axis]
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise WwiseValidationError(
+                    f"point at index {i}: {axis!r} must be a number, got {type(v).__name__}"
+                )
+            if not math.isfinite(float(v)):
+                raise WwiseValidationError(
+                    f"point at index {i}: {axis!r} must be finite, got {v!r}"
+                )
+        if p["shape"] not in _RTPC_CURVE_SHAPES:
+            raise WwiseValidationError(
+                f"point at index {i}: shape must be one of "
+                f"{sorted(_RTPC_CURVE_SHAPES)}, got {p['shape']!r}"
+            )
+        normalized.append({"x": p["x"], "y": p["y"], "shape": p["shape"]})
+
+    obj: dict = {
+        "object": object_path,
+        "@RTPC": [
+            {
+                "type": "RTPC",
+                "name": "",
+                "@PropertyName": property_name,
+                "@ControlInput": control_input_ref,
+                "@Curve": {"type": "Curve", "points": normalized},
+            }
+        ],
+    }
+    if platform is not None:
+        obj["platform"] = platform
+
+    args = {"objects": [obj], "onNameConflict": "merge"}
+    # @RTPC list has SupportListOperations="false" in WObjects.xml; omit listMode.
+
+    try:
+        response = waapi_call("ak.wwise.core.object.set", args)
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to set RTPC curve: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "object_path": object_path,
+                "property_name": property_name,
+                "control_input_ref": control_input_ref,
+                "point_count": len(points),
+            },
+        )
+
+    return _require_non_none(response, "ak.wwise.core.object.set")
+
+
+def create_source_plugin(
+    parent_path: str,
+    name: str,
+    class_id: int,
+    *,
+    properties: dict[str, int | bool | float | str] | None = None,
+    language: str | None = None,
+    on_name_conflict: str = "rename",
+) -> dict:
+    """
+    Create a Source plug-in (Sine, Tone Generator, Silence, SoundSeed Air,
+    etc.) as a child of a Sound or Voice object.
+
+    Parameters
+    ----------
+    parent_path : str
+        Path/GUID of the parent Sound or Voice object.
+    name : str
+        Name of the new Source child.
+    class_id : int
+        Plug-in classId (see WAAPI wobjects_index).
+    properties : dict | None
+        Optional initial property values; each key becomes an @<Key>
+        accessor on the new Source.
+    language : str | None
+        Required for Voice parents (e.g. 'English(US)', 'Japanese'). When set,
+        the child uses `type: "Source"` per WAAPI Voice schema. Omit for Sound
+        parents: the child then uses `type: "SourcePlugin"` per WAAPI Sound
+        schema. The wrapper picks the correct type based on whether `language`
+        is supplied.
+    on_name_conflict : str
+        'fail' | 'rename' | 'replace' | 'merge'. Default 'rename'.
+
+    Returns
+    -------
+    dict
+        The created Source, unwrapped from the WAAPI response. Shape:
+        `{"id": "<guid>", "name": "<resolved name>", "path": "<project path>",
+        "type": "Source" | "SourcePlugin"}` (fields requested via
+        `options.return`). The raw WAAPI response nests the new Source at
+        `response["objects"][0]["children"][0]`; this wrapper returns the
+        child directly so callers can chain off `$last.id` / `$last.path`
+        in the plan executor.
+    """
+    if not isinstance(parent_path, str) or not parent_path.strip():
+        raise WwiseValidationError("parent_path must be a non-empty string")
+    if not isinstance(name, str) or not name.strip():
+        raise WwiseValidationError("name must be a non-empty string")
+    if not isinstance(class_id, int) or isinstance(class_id, bool):
+        raise WwiseValidationError("class_id must be an int")
+    if class_id < 0 or class_id > 0xFFFFFFFF:
+        raise WwiseValidationError(
+            f"class_id must fit in WAAPI unsigned 32-bit range [0, 0xFFFFFFFF], got {class_id}"
+        )
+    if language is not None and (not isinstance(language, str) or not language.strip()):
+        raise WwiseValidationError("language must be a non-empty string when provided")
+    if properties is not None and not isinstance(properties, dict):
+        raise WwiseValidationError("properties must be a dict if provided")
+    if on_name_conflict not in _OBJECT_SET_NAME_CONFLICT_MODES:
+        raise WwiseValidationError(
+            f"on_name_conflict must be one of {sorted(_OBJECT_SET_NAME_CONFLICT_MODES)}, "
+            f"got {on_name_conflict!r}"
+        )
+
+    # WAAPI Sound parents take type=SourcePlugin (schema lines 1399-1431, 1676-1697).
+    # Voice parents take type=Source with a required language field (schema lines 922-948).
+    child_type = "Source" if language is not None else "SourcePlugin"
+
+    child: dict = {"type": child_type, "name": name, "classId": class_id}
+    if language is not None:
+        child["language"] = language
+    for prop_name, prop_value in (properties or {}).items():
+        _reject_at_prefixed(prop_name)
+        child[f"@{prop_name}"] = prop_value
+
+    args = {
+        "objects": [{"object": parent_path, "children": [child]}],
+        "onNameConflict": on_name_conflict,
+    }
+
+    try:
+        response = waapi_call(
+            "ak.wwise.core.object.set",
+            args,
+            options={"return": ["id", "name", "path", "type"]},
+        )
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to create Source plug-in: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "parent_path": parent_path,
+                "name": name,
+                "class_id": class_id,
+                "language": language,
+            },
+        )
+
+    if response is None:
+        raise WwiseApiError(
+            "WAAPI returned None when creating Source plug-in",
+            operation="ak.wwise.core.object.set",
+            details={"parent_path": parent_path, "name": name},
+        )
+
+    # WAAPI mirrors the request shape: objects[0] is the parent Sound/Voice we
+    # called object.set on, and the created Source sits at
+    # objects[0].children[0]. The project's $last.<attr> plan resolver only
+    # walks one dict level, so chainable callers need flat fields. Unwrap the
+    # child so $last.id / $last.path resolve to the new Source.
+    try:
+        created = response["objects"][0]["children"][0]
+    except (KeyError, IndexError, TypeError) as e:
+        raise WwiseApiError(
+            f"Source plug-in was created but the WAAPI response shape was "
+            f"unexpected (could not locate objects[0].children[0]): {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "parent_path": parent_path,
+                "name": name,
+                "raw_response": response,
+            },
+        )
+
+    return created
+
+
 _PROFILER_CURSORS = frozenset({"user", "capture"})
 
 
