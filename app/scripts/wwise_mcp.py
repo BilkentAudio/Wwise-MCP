@@ -1052,6 +1052,191 @@ COMMANDS: dict[str, Command] = {
             "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine). Distinct from disconnect_from_wwise_client (which closes the WAAPI/WAMP socket); "
             "this severs Authoring's remote connection while the WAAPI socket stays open. "
             "Args: None. Returns empty dict on success."
+
+def profiler_start_capture() -> dict:
+    try:
+        return WwisePythonLibrary.profiler_start_capture()
+    except Exception:
+        logger.exception("Failed to start profiler capture.")
+        raise
+
+
+def profiler_stop_capture() -> dict:
+    try:
+        return WwisePythonLibrary.profiler_stop_capture()
+    except Exception:
+        logger.exception("Failed to stop profiler capture.")
+        raise
+
+
+def profiler_get_cursor_time(cursor: str = "capture") -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_cursor_time(cursor)
+    except Exception:
+        logger.exception("Failed to get profiler cursor time.")
+        raise
+
+
+def profiler_enable_data(data_types: list) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_enable_data(data_types)
+    except Exception:
+        logger.exception("Failed to enable profiler data.")
+        raise
+
+
+def profiler_get_voices(
+    time: int | str = "capture",
+    *,
+    voice_pipeline_id: int | None = None,
+    return_fields: list[str] | None = None,
+    timeout: float = 5.0,
+) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_voices(
+            time,
+            voice_pipeline_id=voice_pipeline_id,
+            return_fields=return_fields,
+            timeout=timeout,
+        )
+    except Exception:
+        logger.exception("Failed to get profiler voices.")
+        raise
+
+
+def profiler_get_voice_contributions(
+    voice_pipeline_id: int,
+    *,
+    time: int | str = "capture",
+    busses_pipeline_id: list[int] | None = None,
+    timeout: float = 5.0,
+) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_voice_contributions(
+            voice_pipeline_id,
+            time=time,
+            busses_pipeline_id=busses_pipeline_id,
+            timeout=timeout,
+        )
+    except Exception:
+        logger.exception("Failed to get profiler voice contributions.")
+        raise
+
+
+def profiler_get_audio_objects(
+    time: int | str = "capture",
+    *,
+    bus_pipeline_id: int | None = None,
+    return_fields: list[str] | None = None,
+    timeout: float = 5.0,
+) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_audio_objects(
+            time,
+            bus_pipeline_id=bus_pipeline_id,
+            return_fields=return_fields,
+            timeout=timeout,
+        )
+    except Exception:
+        logger.exception("Failed to get profiler audio objects.")
+        raise
+
+
+def profiler_get_busses(
+    time: int | str = "capture",
+    *,
+    bus_pipeline_id: int | None = None,
+    return_fields: list[str] | None = None,
+    timeout: float = 5.0,
+) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_busses(
+            time,
+            bus_pipeline_id=bus_pipeline_id,
+            return_fields=return_fields,
+            timeout=timeout,
+        )
+    except Exception:
+        logger.exception("Failed to get profiler busses.")
+        raise
+
+
+def profiler_get_rtpcs(time: int | str = "capture", *, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_get_rtpcs(time, timeout=timeout)
+    except Exception:
+        logger.exception("Failed to get profiler RTPCs.")
+        raise
+
+
+def profiler_save_capture(file_path: str, *, timeout: float = 5.0) -> dict:
+    try:
+        return WwisePythonLibrary.profiler_save_capture(file_path, timeout=timeout)
+    except Exception:
+        logger.exception("Failed to save profiler capture.")
+        raise
+
+
+COMMANDS: dict[str, Command] = {
+    "profiler_start_capture" : Command(
+        func=profiler_start_capture,
+        doc="Start the Wwise Profiler capture. Preconditions: Wwise Authoring UI must be open (endpoint is userInterface/commandLine restricted). Call toggle_layout('Profiler') first if Profiler UI visibility matters. "
+            "Args: None. Returns dict {'return': <int capture cursor ms>}."
+    ),
+    "profiler_stop_capture" : Command(
+        func=profiler_stop_capture,
+        doc="Stop the Wwise Profiler capture. Behavior with no active capture is unspecified by the WAAPI schema; verify in smoke. "
+            "Args: None. Returns dict {'return': <int capture cursor ms>}."
+    ),
+    "profiler_get_cursor_time" : Command(
+        func=profiler_get_cursor_time,
+        doc="Return profiler cursor time in ms. Args: cursor: str = 'capture' ('capture' for live capture cursor, 'user' for the user-manipulated cursor). Returns dict {'return': <int ms>}."
+    ),
+    "profiler_enable_data" : Command(
+        func=profiler_enable_data,
+        doc="Enable or disable specific Profiler data types for this session. Each item is either a string (enable=True) or a (dataType, enable_bool) pair. "
+            "CRITICAL: include 'voiceInspector' before calling profiler_get_voice_contributions or its return tree will be empty. "
+            "Args: data_types: list[str | (str, bool)]. Valid dataType values: cpu, memory, stream, voices, listener, obstructionOcclusion, markersNotification, soundbanks, loadedMedia, preparedObjects, preparedGameSyncs, interactiveMusic, streamingDevice, meter, auxiliarySends, apiCalls, spatialAudio, spatialAudioRaycasting, voiceInspector, audioObjects, gameSyncs, customerSupportData (2025.1+). Returns dict (empty on success)."
+    ),
+    "profiler_get_voices" : Command(
+        func=profiler_get_voices,
+        doc="Return voices active at a profiler capture time. "
+            "Args: time: int|str='capture' (ms integer or 'user'|'capture'), voice_pipeline_id: int|None=None (filter to one voice by uint32 pipeline ID), return_fields: list[str]|None=None (subset of pipelineID/playingID/soundID/gameObjectID/gameObjectName/objectGUID/objectName/playTargetID/playTargetGUID/playTargetName/baseVolume/gameAuxSendVolume/envelope/normalizationGain/lowPassFilter/highPassFilter/priority/isStarted/isVirtual/isForcedVirtual), timeout: float=5.0. "
+            "Returns dict {'return': [{voice fields}, ...]}. For chain verification request pipelineID, gameObjectID, gameObjectName, baseVolume, envelope, isVirtual, isStarted."
+    ),
+    "profiler_get_voice_contributions" : Command(
+        func=profiler_get_voice_contributions,
+        doc="Return the contribution tree (volume / LPF / HPF and recursive objects) for one voice path. "
+            "REQUIRES profiler_enable_data to have included 'voiceInspector' for the current session, else the tree is empty. "
+            "Args: voice_pipeline_id: int (uint32 from profiler_get_voices), time: int|str='capture' (ms integer or 'user'|'capture'), "
+            "busses_pipeline_id: list[int]|None=None (bus pipeline-ID chain for a wet path; pass [] explicitly for the dry path; "
+            "omitting leaves the field absent, which WAAPI does not document as equivalent to []), timeout: float=5.0. "
+            "Returns dict {'return': {'volume', 'LPF', 'HPF', 'objects': [...]}}."
+    ),
+    "profiler_get_audio_objects" : Command(
+        func=profiler_get_audio_objects,
+        doc="Return Audio Objects in the post-mix pipeline at a profiler capture time. "
+            "PREREQUISITE: profiler_enable_data(['audioObjects', ...]) for full data. "
+            "Args: time: int|str='capture', bus_pipeline_id: int|None=None (filter to one bus), return_fields: list[str]|None=None (subset of busName/effectPluginName/audioObjectID/busPipelineID/gameObjectID/gameObjectName/audioObjectName/instigatorPipelineID/busID/busGUID/spatializationMode/x/y/z/spread/focus/channelConfig/effectClassID/effectIndex/metadata/rmsMeter/peakMeter), timeout: float=5.0. "
+            "Returns dict {'return': [{audio object fields}, ...]}. To inspect per-object effect processing and metering, request effectPluginName, instigatorPipelineID, rmsMeter, peakMeter."
+    ),
+    "profiler_get_busses" : Command(
+        func=profiler_get_busses,
+        doc="Return busses active at a profiler capture time. "
+            "Args: time: int|str='capture', bus_pipeline_id: int|None=None, return_fields: list[str]|None=None (subset of pipelineID/mixBusID/objectGUID/objectName/gameObjectID/gameObjectName/deviceID/volume/downstreamGain/voiceCount/effectCount/depth), timeout: float=5.0. "
+            "Returns dict {'return': [{bus fields}, ...]}. Use voiceCount + effectCount per bus as a complementary diagnostic for bus-routing health."
+    ),
+    "profiler_get_rtpcs" : Command(
+        func=profiler_get_rtpcs,
+        doc="Return active RTPCs at a profiler capture time. "
+            "Args: time: int|str='capture', timeout: float=5.0. "
+            "Returns dict {'return': [{'id': guid, 'name': str, 'gameObjectId': int (AK_INVALID_GAME_OBJECT for global), 'value': number}]}. Useful for verifying RTPC values at a given capture time."
+    ),
+    "profiler_save_capture" : Command(
+        func=profiler_save_capture,
+        doc="Save the current profiler capture to a .prof file via ak.wwise.core.profiler.saveCapture (NOT saveProfilerCapture). "
+            "Args: file_path: str (absolute path the Wwise Authoring process can write to, typically ending .prof), timeout: float = 5.0. "
+            "Returns empty dict on success."
     ),
     "connect_to_wwise" : Command(
         func=connect_to_wwise,

@@ -372,7 +372,14 @@ class WaapiDispatcher:
             
             try:
                 logger.debug("Executing WAAPI call #%d. URI: %s", call_count, req["uri"])
-                result = self._client.call(req["uri"], req["args"], req["options"])
+                if req["options"] is None:
+                    result = self._client.call(req["uri"], req["args"])
+                else:
+                    result = self._client.call(
+                        req["uri"],
+                        req["args"],
+                        options=req["options"],
+                    )
                 
                 # Only put result if someone is waiting for it
                 if req["reply_q"] is not None:
