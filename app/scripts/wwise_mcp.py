@@ -991,22 +991,12 @@ def delete_object(object_ref: str) -> dict:
         logger.exception("Failed to delte object")
         raise 
 
-#==============================================================================
-#                            Function Dictionary
-#==============================================================================
-
-@dataclass
-class Command:
-    func: callable
-    doc: str
-
 def remote_get_connection_status(*, timeout: float = 5.0) -> dict:
     try:
         return WwisePythonLibrary.remote_get_connection_status(timeout=timeout)
     except Exception:
         logger.exception("Failed to get remote connection status.")
         raise
-
 
 def remote_get_available_consoles(*, timeout: float = 5.0) -> dict:
     try:
@@ -1015,7 +1005,6 @@ def remote_get_available_consoles(*, timeout: float = 5.0) -> dict:
         logger.exception("Failed to get available consoles.")
         raise
 
-
 def remote_connect(host: str, *, app_name: str | None = None, command_port: int | None = None, timeout: float = 5.0) -> dict:
     try:
         return WwisePythonLibrary.remote_connect(host, app_name=app_name, command_port=command_port, timeout=timeout)
@@ -1023,14 +1012,12 @@ def remote_connect(host: str, *, app_name: str | None = None, command_port: int 
         logger.exception("Failed to connect to remote sound engine.")
         raise
 
-
 def remote_disconnect(*, timeout: float = 5.0) -> dict:
     try:
         return WwisePythonLibrary.remote_disconnect(timeout=timeout)
     except Exception:
         logger.exception("Failed to disconnect from remote sound engine.")
         raise
-
 
 def add_effect_to_object(
     object_path: str,
@@ -1048,7 +1035,6 @@ def add_effect_to_object(
     except Exception:
         logger.exception("Failed to add Effect to object @Effects list.")
         raise
-
 
 def create_effect_share_set(
     parent_path: str,
@@ -1071,7 +1057,6 @@ def create_effect_share_set(
         logger.exception("Failed to create Effect ShareSet.")
         raise
 
-
 def set_plugin_property(
     object_path: str,
     property_name: str,
@@ -1090,7 +1075,6 @@ def set_plugin_property(
     except Exception:
         logger.exception("Failed to set plug-in property via object.set.")
         raise
-
 
 def set_rtpc_curve(
     object_path: str,
@@ -1112,7 +1096,6 @@ def set_rtpc_curve(
     except Exception:
         logger.exception("Failed to set RTPC curve via object.set.")
         raise
-
 
 def create_source_plugin(
     parent_path: str,
@@ -1144,14 +1127,12 @@ def profiler_start_capture() -> dict:
         logger.exception("Failed to start profiler capture.")
         raise
 
-
 def profiler_stop_capture() -> dict:
     try:
         return WwisePythonLibrary.profiler_stop_capture()
     except Exception:
         logger.exception("Failed to stop profiler capture.")
         raise
-
 
 def profiler_get_cursor_time(cursor: str = "capture") -> dict:
     try:
@@ -1160,14 +1141,12 @@ def profiler_get_cursor_time(cursor: str = "capture") -> dict:
         logger.exception("Failed to get profiler cursor time.")
         raise
 
-
 def profiler_enable_data(data_types: list) -> dict:
     try:
         return WwisePythonLibrary.profiler_enable_data(data_types)
     except Exception:
         logger.exception("Failed to enable profiler data.")
         raise
-
 
 def profiler_get_voices(
     time: int | str = "capture",
@@ -1187,7 +1166,6 @@ def profiler_get_voices(
         logger.exception("Failed to get profiler voices.")
         raise
 
-
 def profiler_get_voice_contributions(
     voice_pipeline_id: int,
     *,
@@ -1205,7 +1183,6 @@ def profiler_get_voice_contributions(
     except Exception:
         logger.exception("Failed to get profiler voice contributions.")
         raise
-
 
 def profiler_get_audio_objects(
     time: int | str = "capture",
@@ -1225,7 +1202,6 @@ def profiler_get_audio_objects(
         logger.exception("Failed to get profiler audio objects.")
         raise
 
-
 def profiler_get_busses(
     time: int | str = "capture",
     *,
@@ -1244,14 +1220,12 @@ def profiler_get_busses(
         logger.exception("Failed to get profiler busses.")
         raise
 
-
 def profiler_get_rtpcs(time: int | str = "capture", *, timeout: float = 5.0) -> dict:
     try:
         return WwisePythonLibrary.profiler_get_rtpcs(time, timeout=timeout)
     except Exception:
         logger.exception("Failed to get profiler RTPCs.")
         raise
-
 
 def profiler_save_capture(file_path: str, *, timeout: float = 5.0) -> dict:
     try:
@@ -1260,124 +1234,16 @@ def profiler_save_capture(file_path: str, *, timeout: float = 5.0) -> dict:
         logger.exception("Failed to save profiler capture.")
         raise
 
+#==============================================================================
+#                            Function Dictionary
+#==============================================================================
+
+@dataclass
+class Command:
+    func: callable
+    doc: str
 
 COMMANDS: dict[str, Command] = {
-    "remote_get_connection_status" : Command(
-        func=remote_get_connection_status,
-        doc="Retrieve the Wwise Authoring -> Sound Engine remote connection status via ak.wwise.core.remote.getConnectionStatus. "
-            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless WwiseConsole waapi-server cannot serve it. "
-            "Args: None. Returns dict {'isConnected': bool, 'status': str, 'console': {...} (present only when connected)}. "
-            "Use as a gate: assert isConnected before profiler_start_capture so the WAAPI session is the capture authority (avoids WAAPI-vs-UI capture-stream divergence)."
-    ),
-    "remote_get_available_consoles" : Command(
-        func=remote_get_available_consoles,
-        doc="List all consoles (Sound Engine instances) available to connect to (via ak.wwise.core.remote.getAvailableConsoles). "
-            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires Authoring with a UI context, not a headless waapi-server. "
-            "Args: None. Returns dict {'consoles': [{'name','platform','customPlatform','host','appName','commandPort'}, ...]}. "
-            "Feed host + appName (+ commandPort) into remote_connect to target a specific instance."
-    ),
-    "remote_connect" : Command(
-        func=remote_connect,
-        doc="Connect Wwise Authoring to a running Sound Engine instance or a saved .prof capture file. "
-            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless waapi-server cannot serve it. "
-            "Args: host: str (computer name / IPv4 / IP:PORT / full path to a .prof file; '127.0.0.1' for localhost), "
-            "app_name: str|None=None (Application Name from remote_get_available_consoles to pick one of several instances), "
-            "command_port: int|None=None (uint16; requires app_name). The schema's 'notificationPort' arg is 'Unused' and is not exposed. "
-            "Returns empty dict on success."
-    ),
-    "remote_disconnect" : Command(
-        func=remote_disconnect,
-        doc="Disconnect Wwise Authoring from the connected Sound Engine. "
-            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine). Distinct from disconnect_from_wwise_client (which closes the WAAPI/WAMP socket); "
-            "this severs Authoring's remote connection while the WAAPI socket stays open. "
-            "Args: None. Returns empty dict on success."
-    ),
-    "create_effect_share_set" : Command(
-        func=create_effect_share_set,
-        doc="Create a Custom Effect or Effect ShareSet under parent_path (typically '\\Effects\\Default Work Unit\\<folder>') with the given plug-in classId and optional initial properties. "
-            "Args: parent_path : str, name : str, class_id : int, properties : dict | None = None, on_name_conflict : str = 'rename'. Returns dict."
-    ),
-    "add_effect_to_object" : Command(
-        func=add_effect_to_object,
-        doc="Insert an Effect/ShareSet reference into the @Effects list of a Bus, ActorMixer, or Sound via ak.wwise.core.object.set. "
-            "Args: object_path : str, effect_ref : str, list_mode : str = 'append' (or 'replaceAll'). Returns dict."
-    ),
-    "set_plugin_property" : Command(
-        func=set_plugin_property,
-        doc="Set an Effect plug-in property via ak.wwise.core.object.set using the @<PropertyName> accessor. Use for plug-in-defined properties that the older setProperty silently rejects (Steam Audio Spatializer Reflections / Pathing / AirAbsorption / Occlusion / Transmission, Wwise Reverb plug-in params, etc.). "
-            "Args: object_path : str, property_name : str (without leading '@'), value : int|bool|float|str, platform : str | None = None. Returns dict."
-    ),
-    "set_rtpc_curve" : Command(
-        func=set_rtpc_curve,
-        doc="Bind a ControlInput (Game Parameter / Modulator / MIDI) to a target property on an object via the @RTPC list with a breakpoint array. Target property may be an Effect plug-in property that older endpoints silently reject. Distinct from set_attenuation_curve. "
-            "Args: object_path : str, property_name : str (without leading '@'), control_input_ref : str, points : list[dict], platform : str | None = None. "
-            "Each point is {'x': number, 'y': number, 'shape': str}. Shape: Constant|Linear|Log1|Log2|Log3|InvertedSCurve|SCurve|Exp1|Exp2|Exp3. Returns dict."
-    ),
-    "create_source_plugin" : Command(
-        func=create_source_plugin,
-        doc="Create a Source plug-in (Sine, Tone Generator, Silence, SoundSeed Air, etc.) as a child of a Sound or Voice object via ak.wwise.core.object.set. Unblocks Sine/Tone-based diagnostic / smoke-test automation. Returns the created Source unwrapped (id/name/path/type via options.return) so $last.id and $last.path resolve to the new Source. "
-            "Args: parent_path : str, name : str, class_id : int (WAAPI uint32), properties : dict | None = None, language : str | None = None (required for Voice parents; omit for Sound parents), on_name_conflict : str = 'rename' ('fail'|'rename'|'replace'|'merge'). Returns dict."
-    ),
-    "profiler_start_capture" : Command(
-        func=profiler_start_capture,
-        doc="Start the Wwise Profiler capture. Preconditions: Wwise Authoring UI must be open (endpoint is userInterface/commandLine restricted). Call toggle_layout('Profiler') first if Profiler UI visibility matters. "
-            "Args: None. Returns dict {'return': <int capture cursor ms>}."
-    ),
-    "profiler_stop_capture" : Command(
-        func=profiler_stop_capture,
-        doc="Stop the Wwise Profiler capture. Behavior with no active capture is unspecified by the WAAPI schema; verify in smoke. "
-            "Args: None. Returns dict {'return': <int capture cursor ms>}."
-    ),
-    "profiler_get_cursor_time" : Command(
-        func=profiler_get_cursor_time,
-        doc="Return profiler cursor time in ms. Args: cursor: str = 'capture' ('capture' for live capture cursor, 'user' for the user-manipulated cursor). Returns dict {'return': <int ms>}."
-    ),
-    "profiler_enable_data" : Command(
-        func=profiler_enable_data,
-        doc="Enable or disable specific Profiler data types for this session. Each item is either a string (enable=True) or a (dataType, enable_bool) pair. "
-            "CRITICAL: include 'voiceInspector' before calling profiler_get_voice_contributions or its return tree will be empty. "
-            "Args: data_types: list[str | (str, bool)]. Valid dataType values: cpu, memory, stream, voices, listener, obstructionOcclusion, markersNotification, soundbanks, loadedMedia, preparedObjects, preparedGameSyncs, interactiveMusic, streamingDevice, meter, auxiliarySends, apiCalls, spatialAudio, spatialAudioRaycasting, voiceInspector, audioObjects, gameSyncs, customerSupportData (2025.1+). Returns dict (empty on success)."
-    ),
-    "profiler_get_voices" : Command(
-        func=profiler_get_voices,
-        doc="Return voices active at a profiler capture time. "
-            "Args: time: int|str='capture' (ms integer or 'user'|'capture'), voice_pipeline_id: int|None=None (filter to one voice by uint32 pipeline ID), return_fields: list[str]|None=None (subset of pipelineID/playingID/soundID/gameObjectID/gameObjectName/objectGUID/objectName/playTargetID/playTargetGUID/playTargetName/baseVolume/gameAuxSendVolume/envelope/normalizationGain/lowPassFilter/highPassFilter/priority/isStarted/isVirtual/isForcedVirtual), timeout: float=5.0. "
-            "Returns dict {'return': [{voice fields}, ...]}. For chain verification request pipelineID, gameObjectID, gameObjectName, baseVolume, envelope, isVirtual, isStarted."
-    ),
-    "profiler_get_voice_contributions" : Command(
-        func=profiler_get_voice_contributions,
-        doc="Return the contribution tree (volume / LPF / HPF and recursive objects) for one voice path. "
-            "REQUIRES profiler_enable_data to have included 'voiceInspector' for the current session, else the tree is empty. "
-            "Args: voice_pipeline_id: int (uint32 from profiler_get_voices), time: int|str='capture' (ms integer or 'user'|'capture'), "
-            "busses_pipeline_id: list[int]|None=None (bus pipeline-ID chain for a wet path; pass [] explicitly for the dry path; "
-            "omitting leaves the field absent, which WAAPI does not document as equivalent to []), timeout: float=5.0. "
-            "Returns dict {'return': {'volume', 'LPF', 'HPF', 'objects': [...]}}."
-    ),
-    "profiler_get_audio_objects" : Command(
-        func=profiler_get_audio_objects,
-        doc="Return Audio Objects in the post-mix pipeline at a profiler capture time. "
-            "PREREQUISITE: profiler_enable_data(['audioObjects', ...]) for full data. "
-            "Args: time: int|str='capture', bus_pipeline_id: int|None=None (filter to one bus), return_fields: list[str]|None=None (subset of busName/effectPluginName/audioObjectID/busPipelineID/gameObjectID/gameObjectName/audioObjectName/instigatorPipelineID/busID/busGUID/spatializationMode/x/y/z/spread/focus/channelConfig/effectClassID/effectIndex/metadata/rmsMeter/peakMeter), timeout: float=5.0. "
-            "Returns dict {'return': [{audio object fields}, ...]}. To inspect per-object effect processing and metering, request effectPluginName, instigatorPipelineID, rmsMeter, peakMeter."
-    ),
-    "profiler_get_busses" : Command(
-        func=profiler_get_busses,
-        doc="Return busses active at a profiler capture time. "
-            "Args: time: int|str='capture', bus_pipeline_id: int|None=None, return_fields: list[str]|None=None (subset of pipelineID/mixBusID/objectGUID/objectName/gameObjectID/gameObjectName/deviceID/volume/downstreamGain/voiceCount/effectCount/depth), timeout: float=5.0. "
-            "Returns dict {'return': [{bus fields}, ...]}. Use voiceCount + effectCount per bus as a complementary diagnostic for bus-routing health."
-    ),
-    "profiler_get_rtpcs" : Command(
-        func=profiler_get_rtpcs,
-        doc="Return active RTPCs at a profiler capture time. "
-            "Args: time: int|str='capture', timeout: float=5.0. "
-            "Returns dict {'return': [{'id': guid, 'name': str, 'gameObjectId': int (AK_INVALID_GAME_OBJECT for global), 'value': number}]}. Useful for verifying RTPC values at a given capture time."
-    ),
-    "profiler_save_capture" : Command(
-        func=profiler_save_capture,
-        doc="Save the current profiler capture to a .prof file via ak.wwise.core.profiler.saveCapture (NOT saveProfilerCapture). "
-            "Args: file_path: str (absolute path the Wwise Authoring process can write to, typically ending .prof), timeout: float = 5.0. "
-            "Returns empty dict on success."
-    ),
     "connect_to_wwise" : Command(
         func=connect_to_wwise,
         doc="Attempts to reconnect to the currently active wwise session."
@@ -1762,6 +1628,122 @@ COMMANDS: dict[str, Command] = {
         func=delete_object,
         doc="Deletes a Wwise object by GUID, path, or qualified name. "
             "Args: object_ref (str) - Object GUID, object path, or qualified object name."
+    ),
+    "remote_get_connection_status" : Command(
+        func=remote_get_connection_status,
+        doc="Retrieve the Wwise Authoring -> Sound Engine remote connection status via ak.wwise.core.remote.getConnectionStatus. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless WwiseConsole waapi-server cannot serve it. "
+            "Args: None. Returns dict {'isConnected': bool, 'status': str, 'console': {...} (present only when connected)}. "
+            "Use as a gate: assert isConnected before profiler_start_capture so the WAAPI session is the capture authority (avoids WAAPI-vs-UI capture-stream divergence)."
+    ),
+    "remote_get_available_consoles" : Command(
+        func=remote_get_available_consoles,
+        doc="List all consoles (Sound Engine instances) available to connect to (via ak.wwise.core.remote.getAvailableConsoles). "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires Authoring with a UI context, not a headless waapi-server. "
+            "Args: None. Returns dict {'consoles': [{'name','platform','customPlatform','host','appName','commandPort'}, ...]}. "
+            "Feed host + appName (+ commandPort) into remote_connect to target a specific instance."
+    ),
+    "remote_connect" : Command(
+        func=remote_connect,
+        doc="Connect Wwise Authoring to a running Sound Engine instance or a saved .prof capture file. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine) - requires a running Wwise Authoring instance WITH a UI context; a headless waapi-server cannot serve it. "
+            "Args: host: str (computer name / IPv4 / IP:PORT / full path to a .prof file; '127.0.0.1' for localhost), "
+            "app_name: str|None=None (Application Name from remote_get_available_consoles to pick one of several instances), "
+            "command_port: int|None=None (uint16; requires app_name). The schema's 'notificationPort' arg is 'Unused' and is not exposed. "
+            "Returns empty dict on success."
+    ),
+    "remote_disconnect" : Command(
+        func=remote_disconnect,
+        doc="Disconnect Wwise Authoring from the connected Sound Engine. "
+            "RESTRICTION: ak.wwise.core.remote.* is userInterface-only (NOT commandLine). Distinct from disconnect_from_wwise_client (which closes the WAAPI/WAMP socket); "
+            "this severs Authoring's remote connection while the WAAPI socket stays open. "
+            "Args: None. Returns empty dict on success."
+    ),
+    "create_effect_share_set" : Command(
+        func=create_effect_share_set,
+        doc="Create a Custom Effect or Effect ShareSet under parent_path (typically '\\Effects\\Default Work Unit\\<folder>') with the given plug-in classId and optional initial properties. "
+            "Args: parent_path : str, name : str, class_id : int, properties : dict | None = None, on_name_conflict : str = 'rename'. Returns dict."
+    ),
+    "add_effect_to_object" : Command(
+        func=add_effect_to_object,
+        doc="Insert an Effect/ShareSet reference into the @Effects list of a Bus, ActorMixer, or Sound via ak.wwise.core.object.set. "
+            "Args: object_path : str, effect_ref : str, list_mode : str = 'append' (or 'replaceAll'). Returns dict."
+    ),
+    "set_plugin_property" : Command(
+        func=set_plugin_property,
+        doc="Set an Effect plug-in property via ak.wwise.core.object.set using the @<PropertyName> accessor. Use for plug-in-defined properties that the older setProperty silently rejects (Steam Audio Spatializer Reflections / Pathing / AirAbsorption / Occlusion / Transmission, Wwise Reverb plug-in params, etc.). "
+            "Args: object_path : str, property_name : str (without leading '@'), value : int|bool|float|str, platform : str | None = None. Returns dict."
+    ),
+    "set_rtpc_curve" : Command(
+        func=set_rtpc_curve,
+        doc="Bind a ControlInput (Game Parameter / Modulator / MIDI) to a target property on an object via the @RTPC list with a breakpoint array. Target property may be an Effect plug-in property that older endpoints silently reject. Distinct from set_attenuation_curve. "
+            "Args: object_path : str, property_name : str (without leading '@'), control_input_ref : str, points : list[dict], platform : str | None = None. "
+            "Each point is {'x': number, 'y': number, 'shape': str}. Shape: Constant|Linear|Log1|Log2|Log3|InvertedSCurve|SCurve|Exp1|Exp2|Exp3. Returns dict."
+    ),
+    "create_source_plugin" : Command(
+        func=create_source_plugin,
+        doc="Create a Source plug-in (Sine, Tone Generator, Silence, SoundSeed Air, etc.) as a child of a Sound or Voice object via ak.wwise.core.object.set. Unblocks Sine/Tone-based diagnostic / smoke-test automation. Returns the created Source unwrapped (id/name/path/type via options.return) so $last.id and $last.path resolve to the new Source. "
+            "Args: parent_path : str, name : str, class_id : int (WAAPI uint32), properties : dict | None = None, language : str | None = None (required for Voice parents; omit for Sound parents), on_name_conflict : str = 'rename' ('fail'|'rename'|'replace'|'merge'). Returns dict."
+    ),
+    "profiler_start_capture" : Command(
+        func=profiler_start_capture,
+        doc="Start the Wwise Profiler capture. Preconditions: Wwise Authoring UI must be open (endpoint is userInterface/commandLine restricted). Call toggle_layout('Profiler') first if Profiler UI visibility matters. "
+            "Args: None. Returns dict {'return': <int capture cursor ms>}."
+    ),
+    "profiler_stop_capture" : Command(
+        func=profiler_stop_capture,
+        doc="Stop the Wwise Profiler capture. Behavior with no active capture is unspecified by the WAAPI schema; verify in smoke. "
+            "Args: None. Returns dict {'return': <int capture cursor ms>}."
+    ),
+    "profiler_get_cursor_time" : Command(
+        func=profiler_get_cursor_time,
+        doc="Return profiler cursor time in ms. Args: cursor: str = 'capture' ('capture' for live capture cursor, 'user' for the user-manipulated cursor). Returns dict {'return': <int ms>}."
+    ),
+    "profiler_enable_data" : Command(
+        func=profiler_enable_data,
+        doc="Enable or disable specific Profiler data types for this session. Each item is either a string (enable=True) or a (dataType, enable_bool) pair. "
+            "CRITICAL: include 'voiceInspector' before calling profiler_get_voice_contributions or its return tree will be empty. "
+            "Args: data_types: list[str | (str, bool)]. Valid dataType values: cpu, memory, stream, voices, listener, obstructionOcclusion, markersNotification, soundbanks, loadedMedia, preparedObjects, preparedGameSyncs, interactiveMusic, streamingDevice, meter, auxiliarySends, apiCalls, spatialAudio, spatialAudioRaycasting, voiceInspector, audioObjects, gameSyncs, customerSupportData (2025.1+). Returns dict (empty on success)."
+    ),
+    "profiler_get_voices" : Command(
+        func=profiler_get_voices,
+        doc="Return voices active at a profiler capture time. "
+            "Args: time: int|str='capture' (ms integer or 'user'|'capture'), voice_pipeline_id: int|None=None (filter to one voice by uint32 pipeline ID), return_fields: list[str]|None=None (subset of pipelineID/playingID/soundID/gameObjectID/gameObjectName/objectGUID/objectName/playTargetID/playTargetGUID/playTargetName/baseVolume/gameAuxSendVolume/envelope/normalizationGain/lowPassFilter/highPassFilter/priority/isStarted/isVirtual/isForcedVirtual), timeout: float=5.0. "
+            "Returns dict {'return': [{voice fields}, ...]}. For chain verification request pipelineID, gameObjectID, gameObjectName, baseVolume, envelope, isVirtual, isStarted."
+    ),
+    "profiler_get_voice_contributions" : Command(
+        func=profiler_get_voice_contributions,
+        doc="Return the contribution tree (volume / LPF / HPF and recursive objects) for one voice path. "
+            "REQUIRES profiler_enable_data to have included 'voiceInspector' for the current session, else the tree is empty. "
+            "Args: voice_pipeline_id: int (uint32 from profiler_get_voices), time: int|str='capture' (ms integer or 'user'|'capture'), "
+            "busses_pipeline_id: list[int]|None=None (bus pipeline-ID chain for a wet path; pass [] explicitly for the dry path; "
+            "omitting leaves the field absent, which WAAPI does not document as equivalent to []), timeout: float=5.0. "
+            "Returns dict {'return': {'volume', 'LPF', 'HPF', 'objects': [...]}}."
+    ),
+    "profiler_get_audio_objects" : Command(
+        func=profiler_get_audio_objects,
+        doc="Return Audio Objects in the post-mix pipeline at a profiler capture time. "
+            "PREREQUISITE: profiler_enable_data(['audioObjects', ...]) for full data. "
+            "Args: time: int|str='capture', bus_pipeline_id: int|None=None (filter to one bus), return_fields: list[str]|None=None (subset of busName/effectPluginName/audioObjectID/busPipelineID/gameObjectID/gameObjectName/audioObjectName/instigatorPipelineID/busID/busGUID/spatializationMode/x/y/z/spread/focus/channelConfig/effectClassID/effectIndex/metadata/rmsMeter/peakMeter), timeout: float=5.0. "
+            "Returns dict {'return': [{audio object fields}, ...]}. To inspect per-object effect processing and metering, request effectPluginName, instigatorPipelineID, rmsMeter, peakMeter."
+    ),
+    "profiler_get_busses" : Command(
+        func=profiler_get_busses,
+        doc="Return busses active at a profiler capture time. "
+            "Args: time: int|str='capture', bus_pipeline_id: int|None=None, return_fields: list[str]|None=None (subset of pipelineID/mixBusID/objectGUID/objectName/gameObjectID/gameObjectName/deviceID/volume/downstreamGain/voiceCount/effectCount/depth), timeout: float=5.0. "
+            "Returns dict {'return': [{bus fields}, ...]}. Use voiceCount + effectCount per bus as a complementary diagnostic for bus-routing health."
+    ),
+    "profiler_get_rtpcs" : Command(
+        func=profiler_get_rtpcs,
+        doc="Return active RTPCs at a profiler capture time. "
+            "Args: time: int|str='capture', timeout: float=5.0. "
+            "Returns dict {'return': [{'id': guid, 'name': str, 'gameObjectId': int (AK_INVALID_GAME_OBJECT for global), 'value': number}]}. Useful for verifying RTPC values at a given capture time."
+    ),
+    "profiler_save_capture" : Command(
+        func=profiler_save_capture,
+        doc="Save the current profiler capture to a .prof file via ak.wwise.core.profiler.saveCapture (NOT saveProfilerCapture). "
+            "Args: file_path: str (absolute path the Wwise Authoring process can write to, typically ending .prof), timeout: float = 5.0. "
+            "Returns empty dict on success."
     ),
     "begin_undo_group": Command(
         func=WwisePythonLibrary.begin_undo_group,
