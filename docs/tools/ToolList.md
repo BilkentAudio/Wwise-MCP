@@ -417,7 +417,7 @@ Unregisters (removes) a game object from the Wwise sound engine by name.
 
 ### `toggle_layout`
 
-**Description**
+**Description**  
 Switches the current Wwise layout to a requested layout.  
 Valid layouts: `Designer`, `Profiler`, `Soundbank`, `Mixer`, `Audio Object Profiler`, `Voice Profiler`, `Game Object Profiler`.
 
@@ -426,95 +426,6 @@ Valid layouts: `Designer`, `Profiler`, `Soundbank`, `Mixer`, `Audio Object Profi
 - “Switch Wwise to the `Profiler` layout.”
 - “Toggle the layout to `Game Object Profiler` so I can inspect my game objects.”
 - “Change to the `Soundbank` layout.”
-
----
-
-### `remote_get_connection_status`
-
-**Description**
-Retrieves the Wwise Authoring to Sound Engine remote connection status via `ak.wwise.core.remote.getConnectionStatus`.
-
-**Arguments**
-
-None.
-
-**Notes**
-
-- `ak.wwise.core.remote.*` endpoints are `userInterface` only. They require Wwise Authoring with a UI context and cannot be served by a headless `WwiseConsole waapi-server`.
-- Returns `isConnected`, `status`, and a `console` object when connected.
-
-**Example prompts**
-
-- "Check whether Wwise is connected to a remote Sound Engine."
-- "Show the current remote connection status."
-- "Before starting a profiler capture, confirm that Authoring is connected to the target game."
-
----
-
-### `remote_get_available_consoles`
-
-**Description**
-Lists Sound Engine instances available for Wwise Authoring remote connection via `ak.wwise.core.remote.getAvailableConsoles`.
-
-**Arguments**
-
-None.
-
-**Notes**
-
-- Each console includes fields such as `host`, `appName`, `platform`, `customPlatform`, and `commandPort`.
-- Use the returned `host`, `appName`, and optional `commandPort` with `remote_connect`.
-
-**Example prompts**
-
-- "List the available remote consoles Wwise can connect to."
-- "Find the running local game instance for profiling."
-- "Show the available Sound Engine targets and their command ports."
-
----
-
-### `remote_connect`
-
-**Description**
-Connects Wwise Authoring to a running Sound Engine instance or a saved `.prof` capture file via `ak.wwise.core.remote.connect`.
-
-**Arguments**
-
-- `host: str` - Computer name, IPv4 address, IP:PORT pair, or full path to a `.prof` file. Use `127.0.0.1` for localhost.
-- `app_name: str | None = None` - Application Name from `remote_get_available_consoles`, used to select a specific instance.
-- `command_port: int | None = None` - Unsigned 16-bit command port. If supplied, `app_name` must also be supplied.
-
-**Notes**
-
-- The WAAPI schema's `notificationPort` argument is unused and is not exposed by this tool.
-- `command_port` must be in the range `0..65535`.
-
-**Example prompts**
-
-- "Connect Wwise to the local game at `127.0.0.1`."
-- "Connect to the available console named `Integration Demo`."
-- "Open the saved profiler capture at `C:\Captures\combat.prof`."
-
----
-
-### `remote_disconnect`
-
-**Description**
-Disconnects Wwise Authoring from the currently connected Sound Engine via `ak.wwise.core.remote.disconnect`.
-
-**Arguments**
-
-None.
-
-**Notes**
-
-- This does not close the WAAPI socket used by Wwise-MCP. It only disconnects Authoring from the remote Sound Engine.
-
-**Example prompts**
-
-- "Disconnect Wwise from the remote game."
-- "Stop the current remote connection before switching targets."
-- "Disconnect Authoring from the opened profiler capture."
 
 ---
 

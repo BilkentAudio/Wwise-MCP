@@ -119,16 +119,3 @@ Audio Programmer | AI-integrated Audio Tools | Wwise & Unreal Specialist
 
 # Feedback/Questions
 Feel free to reach out to me at bilkentaudiodev@gmail.com
-
-### Remote Connection tools (ak.wwise.core.remote.*)
-
-> **Restriction:** these four endpoints are `userInterface`-only (the profiler.* endpoints are `userInterface` + `commandLine`). They require a running Wwise Authoring instance WITH a UI context; a headless `WwiseConsole waapi-server` cannot serve them.
-
-| Command | WAAPI URI | Args |
-|---|---|---|
-| `remote_get_connection_status` | `ak.wwise.core.remote.getConnectionStatus` | none |
-| `remote_get_available_consoles` | `ak.wwise.core.remote.getAvailableConsoles` | none |
-| `remote_connect` | `ak.wwise.core.remote.connect` | `host` (req), `app_name?`, `command_port?` |
-| `remote_disconnect` | `ak.wwise.core.remote.disconnect` | none |
-
-Use `remote_connect(host="127.0.0.1", app_name=<from getAvailableConsoles>)` to target the game/editor instance the Profiler should capture, then assert `remote_get_connection_status()["isConnected"]` before `profiler_start_capture`. `remote_connect(host=<path>.prof)` reopens a saved capture for offline querying. `remote_disconnect` severs the remote connection; it is NOT the WAAPI-socket teardown (`disconnect_from_wwise_client`).
