@@ -590,6 +590,89 @@ Sets a property value on a Wwise object given its path and property name. The va
 
 ---
 
+### `set_object_randomizer`
+
+**Description**  
+Enables, disables, or modifies a property randomizer on a Wwise object. Randomizers are commonly used to introduce variation in properties such as Volume, Pitch, Lowpass, and Highpass to reduce repetition during playback.
+
+**Example prompts**
+
+- “Add a Pitch randomizer between -50 and 50 cents on `Footstep_Grass`.”
+- “Enable Volume randomization on all footstep sounds.”
+- “Disable the Pitch randomizer on `Weapon_Reload`.”
+- “Set a randomizer on `Lowpass` with a range of -10 to 10.”
+
+---
+
+### `set_attenuation_curve`
+
+**Description**  
+Creates or updates an attenuation curve on a Wwise Attenuation object. Supports all attenuation curve types including volume, filtering, spread, focus, obstruction, occlusion, diffraction, and transmission.
+
+Custom curves can be authored using breakpoint arrays and interpolation shapes.
+
+**Note**: `RadiusMax` must already be configured on the Attenuation object. Curve points must begin at `0.0` and end at `RadiusMax`.
+
+**Example prompts**
+
+- “Create a custom volume attenuation curve on `Footstep_Attenuation`.”
+- “Set the Low Pass Filter attenuation curve for `Weapon_Attenuation`.”
+- “Make the volume attenuation fall off gradually until 20 meters.”
+- “Configure an occlusion LPF curve using these breakpoint values.”
+- “Replace the existing Spread curve on this Attenuation object.”
+
+---
+
+### `assign_switch_container_child`
+
+**Description**  
+Assigns a child object to a specific Switch within a Switch Container. This defines which object should play when the corresponding Switch is active.
+
+Typically used to map Sounds, Random Containers, Blend Containers, or Actor-Mixers to Switch values.
+
+**Example prompts**
+
+- “Assign `Footstep_Grass` to the `Grass` Switch.”
+- “Map `Footstep_Concrete_Random` to `\Switches\SurfaceType\Concrete`.”
+- “Assign each child container to its matching Surface Type Switch.”
+- “Connect this Random Container to the `Indoor` Switch state.”
+
+---
+
+### `assign_blend_track_child`
+
+**Description**  
+Assigns a child object to an existing Blend Track and optionally configures crossfade boundaries and curve shapes.
+
+Blend Tracks themselves are not path-addressable in Wwise, so this command requires the Blend Track GUID returned by `create_blend_tracks`.
+
+For crossfading, the Blend Track should have `EnableCrossFading` enabled and a Game Parameter assigned as its `LayerCrossFadeControlInput`.
+
+**Example prompts**
+
+- “Assign `Engine_Idle` to the `Idle` Blend Track.”
+- “Add `Engine_HighRPM` to this Blend Track and configure crossfade edges.”
+- “Assign these engine layers to their corresponding Blend Tracks.”
+- “Set up a crossfade between `Engine_Low`, `Engine_Mid`, and `Engine_High` using the RPM Game Parameter.”
+
+---
+
+### `assign_child_to_random_sequence_playlist`
+
+**Description**  
+Assigns child objects to the playlist of a Random Container or Sequence Container.
+
+The playlist can either be completely replaced or appended to. All referenced child objects must already exist under the Random or Sequence Container hierarchy.
+
+**Example prompts**
+
+- “Add all footstep variations to `Footstep_Grass_Random`.”
+- “Replace the playlist in `Weapon_Fire_Random` with these sounds.”
+- “Append these three new variations to the existing Random Container playlist.”
+- “Populate the Sequence Container with the intro, loop, and outro sounds in order.”
+
+---
+
 ### `retrieve_selected_objs`
 
 **Description**  
