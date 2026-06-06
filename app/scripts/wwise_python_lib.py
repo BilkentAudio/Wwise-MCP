@@ -1909,6 +1909,103 @@ def set_playlist_root(
 
     return set_object(playlist_container_path, {"@PlaylistRoot": root})
 
+def set_rtpc_curve(
+    object_path: str,
+    property_name: str,
+    control_input_ref: str,
+    points: list[dict],
+    *,
+    platform: str | None = None,
+) -> dict:
+    """
+    Bind a ControlInput (Game Parameter, Modulator, or MIDI) to a target
+    property on an object via the @RTPC list, defining the curve with the
+    given breakpoint array.
+
+    Each point is a dict with keys 'x', 'y', and 'shape'. Shape must be one
+    of: 'Constant', 'Linear', 'Log3', 'Log2', 'Log1', 'InvertedSCurve',
+    'SCurve', 'Exp1', 'Exp2', 'Exp3'.
+
+    The target property can be any settable property including Effect
+    plug-in properties (Steam Audio Spatializer Reflections Mix Level etc.)
+    that the older setProperty endpoint silently rejects.
+
+    Returns
+    -------
+    dict
+        Raw WAAPI response from ak.wwise.core.object.set.
+    """
+    if not isinstance(object_path, str) or not object_path.strip():
+        raise WwiseValidationError("object_path must be a non-empty string")
+    if not isinstance(property_name, str) or not property_name.strip():
+        raise WwiseValidationError("property_name must be a non-empty string")
+    _reject_at_prefixed(property_name)
+    if not isinstance(control_input_ref, str) or not control_input_ref.strip():
+        raise WwiseValidationError("control_input_ref must be a non-empty string")
+    if not points:
+        raise WwiseValidationError("points must be a non-empty list")
+
+    normalized: list[dict] = []
+    for i, p in enumerate(points):
+        if not isinstance(p, dict) or "x" not in p or "y" not in p or "shape" not in p:
+            raise WwiseValidationError(
+                f"point at index {i} must be a dict with keys 'x', 'y', 'shape'"
+            )
+        # bool is a subclass of int in Python; reject it explicitly to avoid silent True/False coords
+        for axis in ("x", "y"):
+            v = p[axis]
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise WwiseValidationError(
+                    f"point at index {i}: {axis!r} must be a number, got {type(v).__name__}"
+                )
+            if not math.isfinite(float(v)):
+                raise WwiseValidationError(
+                    f"point at index {i}: {axis!r} must be finite, got {v!r}"
+                )
+        if p["shape"] not in _RTPC_CURVE_SHAPES:
+            raise WwiseValidationError(
+                f"point at index {i}: shape must be one of "
+                f"{sorted(_RTPC_CURVE_SHAPES)}, got {p['shape']!r}"
+            )
+        normalized.append({"x": p["x"], "y": p["y"], "shape": p["shape"]})
+
+    obj: dict = {
+        "object": object_path,
+        "@RTPC": [
+            {
+                "type": "RTPC",
+                "name": "",
+                "@PropertyName": property_name,
+                "@ControlInput": control_input_ref,
+                "@Curve": {"type": "Curve", "points": normalized},
+            }
+        ],
+    }
+    if platform is not None:
+        obj["platform"] = platform
+
+    args = {"objects": [obj], "onNameConflict": "merge"}
+    # @RTPC list has SupportListOperations="false" in WObjects.xml; omit listMode.
+
+    try:
+        response = waapi_call("ak.wwise.core.object.set", args)
+    except WwisePyLibError:
+        raise
+    except Exception as e:
+        raise WwiseApiError(
+            f"Failed to set RTPC curve: {e}",
+            operation="ak.wwise.core.object.set",
+            details={
+                "error_type": type(e).__name__,
+                "object_path": object_path,
+                "property_name": property_name,
+                "control_input_ref": control_input_ref,
+                "point_count": len(points),
+            },
+        )
+
+    return _require_non_none(response, "ak.wwise.core.object.set")
+
 def _normalize_curve_point(point) -> dict:
     """Normalize a curve point into the WAAPI {'x', 'y', 'shape'} dict form."""
     if isinstance(point, dict):
@@ -1924,79 +2021,6 @@ def _normalize_curve_point(point) -> dict:
             raise ValueError(f"curve point tuple must be (x, y) or (x, y, shape): {point}")
         return {"x": x, "y": y, "shape": shape}
     raise TypeError(f"unsupported curve point type: {type(point).__name__}")
-
-def add_rtpc_binding(
-    object_path: str,
-    control_input: str,
-    property_name: str,
-    points: list | None = None,
-    notes: str = ""
-) -> None:
-
-    """
-    Adds an RTPC binding (with optional curve) to an existing object's "@RTPC"
-    list via set_object.
-
-    This creates the RTPC *binding* — the link between a control input, a target
-    property, and a curve. It does NOT create the control input: the game
-    parameter / Modulator / MIDI object referenced by `control_input` must
-    already exist, since it is passed by reference (path or GUID).
-
-    Parameters
-    ----------
-    object_path : str
-        Path to the target object that will host the RTPC (must already exist).
-    control_input : str
-        Path or GUID of an existing GameParameter, Modulator, or MIDI object.
-        This is the x-axis source of the RTPC.
-    property_name : str
-        The property driven by the RTPC, e.g. "OutputBusVolume", "Volume",
-        "Pitch", "Lowpass". Passed as the bare property name (no leading '@').
-    points : list, optional
-        Curve points. Each item may be either a dict
-        ({"x": <float>, "y": <float>, "shape": <str>}) or a tuple
-        ((x, y) or (x, y, shape)). 'shape' defaults to "Linear" when omitted.
-        If None, @Curve is omitted and Wwise generates its default curve.
-    notes : str, optional
-        Notes string stored on the RTPC binding.
-
-    Example
-    -------
-
-    add_rtpc(
-        r"\Actor-Mixer Hierarchy\Default Work Unit\Engine",
-        control_input=r"\Game Parameters\Default Work Unit\RPM",
-        property_name="OutputBusVolume",
-        points=[(0, -20.83), (1000, 21.85)]
-    )
-    """
-
-    if not object_path:
-        raise ValueError("object_path must be specified")
-
-    if not control_input:
-        raise ValueError("control_input must be specified")
-
-    if not property_name:
-        raise ValueError("property_name must be specified")
-
-    rtpc = {
-        "type": "RTPC",
-        "name": "",
-        "notes": notes,
-        "@PropertyName": property_name,
-        "@ControlInput": control_input,
-    }
-
-    if points is not None:
-        if not points:
-            raise ValueError("points must contain at least one point when provided")
-        rtpc["@Curve"] = {
-            "type": "Curve",
-            "points": [_normalize_curve_point(p) for p in points],
-        }
-
-    return set_object(object_path, {"@RTPC": [rtpc]})
 
 def set_reference(
     object_path: str,
@@ -3465,105 +3489,6 @@ _RTPC_CURVE_SHAPES = frozenset({
     "InvertedSCurve", "SCurve",
     "Exp1", "Exp2", "Exp3",
 })
-
-
-def set_rtpc_curve(
-    object_path: str,
-    property_name: str,
-    control_input_ref: str,
-    points: list[dict],
-    *,
-    platform: str | None = None,
-) -> dict:
-    """
-    Bind a ControlInput (Game Parameter, Modulator, or MIDI) to a target
-    property on an object via the @RTPC list, defining the curve with the
-    given breakpoint array.
-
-    Each point is a dict with keys 'x', 'y', and 'shape'. Shape must be one
-    of: 'Constant', 'Linear', 'Log3', 'Log2', 'Log1', 'InvertedSCurve',
-    'SCurve', 'Exp1', 'Exp2', 'Exp3'.
-
-    The target property can be any settable property including Effect
-    plug-in properties (Steam Audio Spatializer Reflections Mix Level etc.)
-    that the older setProperty endpoint silently rejects.
-
-    Returns
-    -------
-    dict
-        Raw WAAPI response from ak.wwise.core.object.set.
-    """
-    if not isinstance(object_path, str) or not object_path.strip():
-        raise WwiseValidationError("object_path must be a non-empty string")
-    if not isinstance(property_name, str) or not property_name.strip():
-        raise WwiseValidationError("property_name must be a non-empty string")
-    _reject_at_prefixed(property_name)
-    if not isinstance(control_input_ref, str) or not control_input_ref.strip():
-        raise WwiseValidationError("control_input_ref must be a non-empty string")
-    if not points:
-        raise WwiseValidationError("points must be a non-empty list")
-
-    normalized: list[dict] = []
-    for i, p in enumerate(points):
-        if not isinstance(p, dict) or "x" not in p or "y" not in p or "shape" not in p:
-            raise WwiseValidationError(
-                f"point at index {i} must be a dict with keys 'x', 'y', 'shape'"
-            )
-        # bool is a subclass of int in Python; reject it explicitly to avoid silent True/False coords
-        for axis in ("x", "y"):
-            v = p[axis]
-            if isinstance(v, bool) or not isinstance(v, (int, float)):
-                raise WwiseValidationError(
-                    f"point at index {i}: {axis!r} must be a number, got {type(v).__name__}"
-                )
-            if not math.isfinite(float(v)):
-                raise WwiseValidationError(
-                    f"point at index {i}: {axis!r} must be finite, got {v!r}"
-                )
-        if p["shape"] not in _RTPC_CURVE_SHAPES:
-            raise WwiseValidationError(
-                f"point at index {i}: shape must be one of "
-                f"{sorted(_RTPC_CURVE_SHAPES)}, got {p['shape']!r}"
-            )
-        normalized.append({"x": p["x"], "y": p["y"], "shape": p["shape"]})
-
-    obj: dict = {
-        "object": object_path,
-        "@RTPC": [
-            {
-                "type": "RTPC",
-                "name": "",
-                "@PropertyName": property_name,
-                "@ControlInput": control_input_ref,
-                "@Curve": {"type": "Curve", "points": normalized},
-            }
-        ],
-    }
-    if platform is not None:
-        obj["platform"] = platform
-
-    args = {"objects": [obj], "onNameConflict": "merge"}
-    # @RTPC list has SupportListOperations="false" in WObjects.xml; omit listMode.
-
-    try:
-        response = waapi_call("ak.wwise.core.object.set", args)
-    except WwisePyLibError:
-        raise
-    except Exception as e:
-        raise WwiseApiError(
-            f"Failed to set RTPC curve: {e}",
-            operation="ak.wwise.core.object.set",
-            details={
-                "error_type": type(e).__name__,
-                "object_path": object_path,
-                "property_name": property_name,
-                "control_input_ref": control_input_ref,
-                "point_count": len(points),
-            },
-        )
-
-    return _require_non_none(response, "ak.wwise.core.object.set")
-
 
 def create_source_plugin(
     parent_path: str,
