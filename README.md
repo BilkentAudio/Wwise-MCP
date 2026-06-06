@@ -79,7 +79,7 @@ It is still under active development and should not be used with Wwise projects 
 # Features
 - **Wwise Session Connection**: Connects to the active Wwise session so the agent can issue WAAPI commands to the appropriate wwise session.
 - **Hierarchy Indexing**: Scans a parent path and builds a path-first index of the subtree for fast lookup and navigation.
-- **Object Creation & Organization**: Creates actor-mixers, containers, buses, work units, soundbanks, folders, and more under specified parent paths, and can move or rename them in batches.
+- **Object Creation & Organization**: Creates actor-mixers, containers, buses, work units, soundbanks, folders, attenuations and more under specified parent paths, and can move or rename them in batches.
 - **Property, Reference & Automation Configuration**: Sets object references, configures RTPC curves, attenuation curves and property randomizations.
 - **Container Assignment & Playback Logic**: Assigns children to Switch Containers, Blend Tracks, and Random/Sequence Container playlists, enabling automated setup of switch-based, blend-based, and randomized playback structures.
 - **Event Authoring**: Creates multiple Wwise events in one batch from source objects and parent paths, and lists all existing event names.
