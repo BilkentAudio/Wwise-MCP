@@ -304,6 +304,40 @@ Lists all game objects currently registered in the Wwise session.
 
 ---
 
+### `run_waql`
+
+**Description**  
+Executes a raw WAQL query against the Wwise project and returns all matching objects. This is the most flexible query tool and can be used for ad-hoc project exploration, hierarchy traversal, reference lookups, filtering, and object discovery.
+
+Custom return fields may be specified, including Wwise properties and references using the same `@Property` and `@@Property` syntax supported by `get_objects_info`. If no return fields are provided, the command returns `id`, `name`, `type`, and `path`.
+
+**Example prompts**
+
+- “Run the WAQL query `$ "\\Actor-Mixer Hierarchy" select descendants`.”
+- “Find all Random Containers in the project using WAQL.”
+- “Run a WAQL query to find every Sound object whose name contains `Footstep`.”
+- “Show all objects that reference `\Game Parameters\Default Work Unit\Speed`.”
+- “Execute this WAQL query and return each object's name, path, and `@@OutputBus`.”
+
+---
+
+### `find_references_to`
+
+**Description**  
+Finds every object in the project that references a given object. This is the quickest way to answer questions such as “What uses this object?” or “What will be affected if I modify or delete this?”
+
+The target object may be specified using a project path, GUID, or qualified object name. This tool can identify references from RTPCs, Blend Tracks, Attenuations, Output Buses, Auxiliary Sends, Switches, States, Effects, and other Wwise relationships.
+
+**Example prompts**
+
+- “Find everything that references `\Game Parameters\Default Work Unit\Speed`.”
+- “What currently uses the `Player_Health` Game Parameter?”
+- “Show all objects that reference `\Master-Mixer Hierarchy\Default Work Unit\SFX_Bus`.”
+- “Find every object using the `Explosion_Reverb` ShareSet.”
+- “Before I delete this Attenuation object, show me everything that references it.”
+
+---
+
 ### `post_event`
 
 **Description**  
