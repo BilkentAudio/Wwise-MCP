@@ -80,12 +80,20 @@ It is still under active development and should not be used with Wwise projects 
 - **Wwise Session Connection**: Connects to the active Wwise session so the agent can issue WAAPI commands to the appropriate wwise session.
 - **Hierarchy Indexing**: Scans a parent path and builds a path-first index of the subtree for fast lookup and navigation.
 - **Object Creation & Organization**: Creates actor-mixers, containers, buses, work units, soundbanks, folders, and more under specified parent paths, and can move or rename them in batches.
+- **Property, Reference & Automation Configuration**: Sets object references, configures RTPC curves, attenuation curves, property randomizers, and advanced object fields that are not exposed through standard property APIs.
+- **Container Assignment & Playback Logic**: Assigns children to Switch Containers, Blend Tracks, and Random/Sequence Container playlists, enabling automated setup of switch-based, blend-based, and randomized playback structures.
 - **Event Authoring**: Creates multiple Wwise events in one batch from source objects and parent paths, and lists all existing event names.
+- **Music Authoring & Interactive Music Setup**: Creates Blend Tracks, assigns Music Switch Container arguments and entries, builds Music Playlist hierarchies, and retrieves authored Music Transition rules including sync, fade, and transition-segment settings.
 - **Game Object Management**: Creates, moves, and unregisters game objects in batches, with full 3D positioning support and a global fallback object.
 - **RTPC / Switch / State Setup**: Batch-creates RTPCs, switch groups, switches, state groups, and states, and exposes helpers to list and set them at runtime.
 - **Audio Import & Discovery**: Imports folders of audio into Wwise under a target parent, and lists all audio files under a given file-system path.
 - **Soundbank Configuration & Build**: Includes selected objects in soundbanks and generates soundbanks for specified platforms and languages using project metadata.
 - **Runtime Audio Control**: Posts events with optional delays, sets RTPC ramps, switches and states, moves game objects over time, and stops all sounds in the captured session.
+- **Advanced Project Queries & Dependency Analysis**: Executes arbitrary WAQL queries, retrieves detailed object information (including authored and resolved properties), discovers available properties/references, and finds every object that references a target object.
+- **Remote Connection Management**: Connects Wwise Authoring to running Sound Engine instances or profiler captures, lists available targets, checks connection status, and disconnects remote sessions.
+- **Effect & Plug-in Authoring**: Creates Effect ShareSets, adds effects to sounds, buses, and actor-mixers, configures plug-in-specific properties, and creates Source Plug-ins such as Sine, Tone Generator, and SoundSeed sources.
+- **Profiler Capture & Runtime Diagnostics**: Starts and stops profiler captures, enables profiler data streams, retrieves voices, RTPCs, audio objects, bus activity, voice contribution trees, cursor positions, and exports captures to `.prof` files for offline analysis.
+- **Object Lifecycle Management**: Deletes Wwise objects by path, GUID, or qualified name, and provides tools to inspect dependencies before removal.
 - **Layout & Property Utilities**: Toggles Wwise layouts, sets object properties by path, retrieves the current selection, and lists valid property names and value types.
 - Refer to [Tools](https://github.com/BilkentAudio/Wwise-MCP/blob/main/docs/tools/ToolList.md) page for detailed explanation of each functionality.
 
