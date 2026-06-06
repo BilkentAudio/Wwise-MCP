@@ -179,6 +179,54 @@ Renames one or more Wwise objects, either by providing their paths or by using t
 
 ---
 
+### `get_objects_info`
+
+**Description**  
+Retrieves detailed information about one or more Wwise objects by path. You can request standard WAAPI fields (such as `id`, `name`, `type`, `path`, `parent`, `children`, and `notes`) as well as custom properties and references using Wwise's `@` and `@@` syntax.
+
+- `@PropertyName` returns the value authored directly on the object.
+- `@@PropertyName` returns the fully resolved value after inheritance and override resolution.
+
+For example, if a Random Container inherits its Output Bus from a parent Actor-Mixer, `@OutputBus` may be empty while `@@OutputBus` returns the inherited bus.
+
+**Example prompts**
+
+- “Get the name, type, path, and notes for `\Actor-Mixer Hierarchy\Weapons\Rifle_Fire`.”
+- “Show me `@Volume`, `@Pitch`, and `@@OutputBus` for `\Actor-Mixer Hierarchy\Characters\Player\Footsteps`.”
+- “Retrieve the children, attenuation, output bus, and effects for all objects returned from the previous call.”
+- “Compare authored versus resolved Output Bus values for `\Actor-Mixer Hierarchy\UI\Button_Click`.”
+
+---
+
+### `get_property_and_reference_names`
+
+**Description**  
+Retrieves all valid WAAPI properties and references available for a Wwise object. This is useful when determining which `@Property` and `@@Property` fields can be queried or modified for a specific object type.
+
+**Example prompts**
+
+- “Show me all available properties and references for `\Actor-Mixer Hierarchy\Weapons\Rifle_Fire`.”
+- “What fields can I query on this Blend Container?”
+- “List every property available on `\Master-Mixer Hierarchy\Default Work Unit\SFX`.”
+- “Before modifying this object, show me all supported `@` and `@@` fields.”
+
+---
+
+### `get_music_transitions`
+
+**Description**  
+Retrieves all Music Transition rules authored inside a Music Switch Container, Music Playlist Container, Music Segment, or other music object. This is useful for inspecting transition logic, synchronization settings, fade behavior, transition segments, source/destination contexts, and cue-based navigation.
+
+**Example prompts**
+
+- “Show me all transition rules in `\Interactive Music Hierarchy\Combat_System`.”
+- “Inspect the music transitions inside `\Interactive Music Hierarchy\Explore_to_Combat`.”
+- “List all transition segments, fade durations, and sync settings for this Music Switch Container.”
+- “Show me which transitions use transition segments and which are direct jumps.”
+- “Retrieve all music transitions under `\Interactive Music Hierarchy\Default Work Unit\BattleMusic`.”
+
+---
+
 ### `import_audio_files`
 
 **Description**  
