@@ -481,6 +481,102 @@ Lists all audio files under a given folder in the file system (e.g. `C:\Audio`).
 
 ---
 
+### `set_object`
+
+**Description**  
+Low-level wrapper around `ak.wwise.core.object.set` for modifying complex Wwise object fields that cannot be handled by `setProperty` or `setReference`.
+
+This tool is primarily intended for advanced workflows. When a dedicated wrapper exists (such as `assign_music_arguments`, `assign_music_entries`, or `set_playlist_root`), that wrapper should be preferred instead.
+
+Depending on the target field, values may be provided as a single path, a list of paths, or a list of WAAPI schema dictionaries.
+
+**Example prompts**
+
+- “Set the `Arguments` field on this Music Switch Container using these State Groups.”
+- “Populate a custom object list field using the following WAAPI schema objects.”
+- “Assign these references to the object's complex list field.”
+- “Use `set_object` to update a field that does not have a dedicated wrapper.”
+
+---
+
+### `assign_music_arguments`
+
+**Description**  
+Assigns one or more State Groups or Switch Groups as Arguments on a Music Switch Container. These Arguments determine which Switches or States the container evaluates when selecting which child object to play.
+
+This must be configured before assigning music entries, as entries depend on the Argument definitions.
+
+**Example prompts**
+
+- “Assign the `Combat_State` State Group as an argument on `\Interactive Music Hierarchy\Combat_System`.”
+- “Configure `Combat_State` and `Turn_Switch` as arguments for this Music Switch Container.”
+- “Set up the State and Switch Groups this Music Switch Container should evaluate.”
+- “Add `Game_State` as the controlling argument for this music container.”
+
+---
+
+### `assign_music_entries`
+
+**Description**  
+Assigns State/Switch-to-child mappings on a Music Switch Container. Each entry tells Wwise which child Music Playlist Container, Music Segment, or nested Music Switch Container should play when a specific State or Switch combination is active.
+
+Requires Arguments to have been assigned first using `assign_music_arguments`.
+
+**Example prompts**
+
+- “Map `Combat_State\Explore` to `Explore_Playlist`.”
+- “Assign `Combat_State\Combat` to `Combat_Playlist` and `Combat_State\Victory` to `Victory_Segment`.”
+- “For the container we just created, assign all child playlists to their corresponding States.”
+- “Map the combination of `Combat_State\Combat` and `Turn_Switch\PlayerTurn` to `PlayerTurn_Playlist`.”
+
+---
+
+### `set_playlist_root`
+
+**Description**  
+Populates a Music Playlist Container's playlist structure. This tool can create playlists containing Music Segments, nested groups, loop counts, and hierarchical playlist layouts.
+
+Any existing playlist content is replaced.
+
+**Example prompts**
+
+- “Create a playlist containing `Intro_Segment`, `Loop_Segment`, and `Outro_Segment`.”
+- “Set the playlist root for `Combat_Playlist` to play `Combat_Loop` infinitely.”
+- “Create a playlist group containing three random combat segments.”
+- “Replace the current playlist with this new hierarchy of Music Playlist Items.”
+
+---
+
+### `set_rtpc_curve`
+
+**Description**  
+Creates or updates an RTPC curve by binding a Control Input (Game Parameter, Modulator, or MIDI source) to a target property on a Wwise object.
+
+Supports custom breakpoint arrays and curve interpolation shapes. This is distinct from attenuation curves, which are handled separately.
+
+**Example prompts**
+
+- “Bind the `Speed` Game Parameter to `Volume` on `Engine_Loop`.”
+- “Create an RTPC curve that drives Pitch from the `RPM` Game Parameter.”
+- “Set an RTPC curve on an Effect property using these breakpoints.”
+- “Map `Player_Health` to Lowpass with a smooth S-curve response.”
+
+---
+
+### `set_object_reference`
+
+**Description**  
+Assigns a Wwise object reference to another Wwise object. Common examples include setting an Output Bus, Attenuation, Conversion Settings, ShareSet, or other reference-based relationships.
+
+**Example prompts**
+
+- “Assign `\Attenuations\Footstep_Attenuation` to `Footstep_Grass`.”
+- “Set the Output Bus of `Explosion_Large` to `\Master-Mixer Hierarchy\SFX_Bus`.”
+- “Assign the `Hall_Reverb` ShareSet to this Auxiliary Bus.”
+- “Update the object's Attenuation reference to use `Weapon_Attenuation`.”
+
+---
+
 ### `set_object_property`
 
 **Description**  
