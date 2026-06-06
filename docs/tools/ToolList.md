@@ -725,3 +725,319 @@ Returns a help string listing WAAPI property identifiers and valid value types f
 - “Give me a reference of all properties I can set on a Bus.”
 
 ---
+
+### `delete_object`
+
+**Description**  
+Deletes a Wwise object using its GUID, project path, or qualified object name. Use with caution, as deleting an object may affect any references, RTPCs, buses, switch assignments, playlists, or other systems that depend on it.
+
+Consider using `find_references_to` before deletion to identify affected objects.
+
+**Example prompts**
+
+- “Delete `\Actor-Mixer Hierarchy\Unused\Old_Footstep_Sound`.”
+- “Remove the ShareSet called `Legacy_Reverb`.”
+- “Delete this object using its GUID.”
+- “Find everything referencing this object, then delete it.”
+
+---
+
+## Remote Connection Tools
+
+### `remote_get_connection_status`
+
+**Description**  
+Retrieves the current Wwise Authoring ↔ Sound Engine remote connection status.
+
+This is useful for determining whether Authoring is connected to a running game, console, or profiler capture before using runtime or profiler-related tools.
+
+**Note**: Requires a Wwise Authoring instance running with a UI. Not supported by headless WwiseConsole WAAPI servers.
+
+**Example prompts**
+
+- “Check whether Wwise is connected to the game.”
+- “Show the current remote connection status.”
+- “Verify that Authoring is connected before starting a profiler capture.”
+- “Which Sound Engine instance is currently connected?”
+
+---
+
+### `remote_get_available_consoles`
+
+**Description**  
+Lists all available Sound Engine instances that Wwise Authoring can connect to.
+
+Useful when multiple local, remote, or console builds are running and you need to select a specific target.
+
+**Note**: Requires a Wwise Authoring instance running with a UI.
+
+**Example prompts**
+
+- “List all available game instances I can connect to.”
+- “Show all Sound Engine targets discovered by Wwise.”
+- “Find the running game instance on localhost.”
+- “What consoles are available for remote connection?”
+
+---
+
+### `remote_connect`
+
+**Description**  
+Connects Wwise Authoring to a running Sound Engine instance or an existing `.prof` profiler capture.
+
+Supports local targets, remote targets, and saved profiler captures.
+
+**Note**: Requires a Wwise Authoring instance running with a UI.
+
+**Example prompts**
+
+- “Connect Wwise to the game running on localhost.”
+- “Connect to the available Xbox instance.”
+- “Attach Authoring to the game running on this machine.”
+- “Open and connect to this `.prof` capture file.”
+
+---
+
+### `remote_disconnect`
+
+**Description**  
+Disconnects Wwise Authoring from the currently connected Sound Engine instance.
+
+This only affects the Authoring remote connection and does not disconnect the WAAPI session itself.
+
+**Example prompts**
+
+- “Disconnect Wwise from the game.”
+- “Close the current remote connection.”
+- “Detach Authoring from the Sound Engine.”
+- “Stop monitoring the connected runtime instance.”
+
+---
+
+## Effects & Plug-ins
+
+### `create_effect_share_set`
+
+**Description**  
+Creates a Custom Effect or Effect ShareSet under the specified parent path and optionally initializes plug-in properties.
+
+Useful for automating effect setup and reusable effect chains.
+
+**Example prompts**
+
+- “Create a new Reverb ShareSet called `Large_Hall`.”
+- “Create a Steam Audio Reflection ShareSet under `\Effects\Default Work Unit`.”
+- “Create an Effect ShareSet and initialize its properties.”
+- “Create a custom effect preset for weapon tails.”
+
+---
+
+### `add_effect_to_object`
+
+**Description**  
+Adds an Effect or ShareSet reference to a Sound, Actor-Mixer, or Bus.
+
+Effects can be appended to the existing chain or replace the current effect list entirely.
+
+**Example prompts**
+
+- “Add the `Large_Hall` Reverb ShareSet to `Explosion_Large`.”
+- “Insert this effect onto the SFX bus.”
+- “Append a Compressor to the existing effect chain.”
+- “Replace all effects on this bus with these ShareSets.”
+
+---
+
+### `set_plugin_property`
+
+**Description**  
+Sets a plug-in-specific property using WAAPI's object-set workflow.
+
+Useful for configuring effect parameters that older property-setting APIs cannot modify, including many third-party plug-ins and advanced Wwise effects.
+
+**Example prompts**
+
+- “Set the Reflection Amount property on this Steam Audio effect.”
+- “Update the Reverb Time parameter to 3.5 seconds.”
+- “Configure Occlusion on this plug-in.”
+- “Set the plug-in property `Transmission` to enabled.”
+
+---
+
+### `create_source_plugin`
+
+**Description**  
+Creates a Source Plug-in as a child of a Sound or Voice object.
+
+Useful for procedural generators, diagnostic signals, synthesis workflows, and SoundSeed-based systems.
+
+**Example prompts**
+
+- “Create a Sine source under this Sound object.”
+- “Add a Tone Generator source for testing.”
+- “Create a SoundSeed Air source and configure its properties.”
+- “Generate a Silence source for debugging playback behavior.”
+
+---
+
+## Profiler Tools
+
+### `profiler_start_capture`
+
+**Description**  
+Starts a Wwise Profiler capture.
+
+Typically used before gathering voice, RTPC, bus, meter, or audio-object information.
+
+**Example prompts**
+
+- “Start a profiler capture.”
+- “Begin recording profiler data.”
+- “Start capturing runtime audio information.”
+- “Begin a profiling session.”
+
+---
+
+### `profiler_stop_capture`
+
+**Description**  
+Stops the active Wwise Profiler capture.
+
+**Example prompts**
+
+- “Stop the profiler capture.”
+- “End the current profiling session.”
+- “Finish recording profiler data.”
+- “Stop capturing runtime information.”
+
+---
+
+### `profiler_get_cursor_time`
+
+**Description**  
+Returns the current profiler cursor position in milliseconds.
+
+Supports both the live capture cursor and the user-controlled cursor.
+
+**Example prompts**
+
+- “What time is the profiler cursor currently at?”
+- “Show the capture cursor position.”
+- “Get the user cursor time.”
+- “Return the current profiler timestamp.”
+
+---
+
+### `profiler_enable_data`
+
+**Description**  
+Enables or disables specific categories of profiler data collection.
+
+Some profiler tools require specific data types to be enabled before information becomes available.
+
+**Important**: Enable `voiceInspector` before using `profiler_get_voice_contributions`.
+
+**Example prompts**
+
+- “Enable voice inspector data.”
+- “Enable audio object and bus profiling.”
+- “Turn on RTPC and voice capture data.”
+- “Configure profiler data collection for voice debugging.”
+
+---
+
+### `profiler_get_voices`
+
+**Description**  
+Returns all active voices at a specific profiler capture time.
+
+Useful for debugging virtualization, playback state, priorities, routing, and voice counts.
+
+**Example prompts**
+
+- “Show all active voices.”
+- “List every voice playing at the current capture time.”
+- “Find virtualized voices.”
+- “Inspect voice activity for this game object.”
+
+---
+
+### `profiler_get_voice_contributions`
+
+**Description**  
+Returns the contribution tree for a specific voice, including volume, filtering, and object-level contribution data.
+
+Useful for understanding why a voice sounds the way it does after all routing and processing have been applied.
+
+**Example prompts**
+
+- “Show the contribution tree for this voice.”
+- “Why is this voice quieter than expected?”
+- “Inspect all volume and filter contributions for this sound.”
+- “Analyze the voice processing chain.”
+
+---
+
+### `profiler_get_audio_objects`
+
+**Description**  
+Returns Audio Objects present in the post-mix pipeline at a given profiler time.
+
+Useful for inspecting object-based audio, effect processing, metering, and spatialization.
+
+**Example prompts**
+
+- “Show all active audio objects.”
+- “Inspect object-based audio processing.”
+- “List audio objects on this bus.”
+- “Show RMS and peak meter values for active audio objects.”
+
+---
+
+### `profiler_get_busses`
+
+**Description**  
+Returns active busses at a given profiler capture time.
+
+Useful for inspecting routing, bus activity, voice counts, downstream gain, and effect usage.
+
+**Example prompts**
+
+- “Show all active busses.”
+- “Inspect the bus routing hierarchy.”
+- “List voice counts per bus.”
+- “Find which busses currently have active effects.”
+
+---
+
+### `profiler_get_rtpcs`
+
+**Description**  
+Returns all active RTPC values at a given profiler capture time.
+
+Useful for validating runtime parameter behavior and troubleshooting game parameter updates.
+
+**Example prompts**
+
+- “Show all active RTPCs.”
+- “Inspect current Game Parameter values.”
+- “What is the current value of the Speed RTPC?”
+- “List all RTPCs affecting the running game.”
+
+---
+
+### `profiler_save_capture`
+
+**Description**  
+Saves the current profiler capture to a `.prof` file.
+
+Useful for archiving captures, sharing profiling sessions, and offline analysis.
+
+**Example prompts**
+
+- “Save the current profiler capture.”
+- “Export this profiling session to a `.prof` file.”
+- “Write the capture to disk.”
+- “Save the profiler recording for later analysis.”
+
+---
