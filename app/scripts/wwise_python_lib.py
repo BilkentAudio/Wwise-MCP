@@ -1951,7 +1951,6 @@ def set_rtpc_curve(
             raise WwiseValidationError(
                 f"point at index {i} must be a dict with keys 'x', 'y', 'shape'"
             )
-        # bool is a subclass of int in Python; reject it explicitly to avoid silent True/False coords
         for axis in ("x", "y"):
             v = p[axis]
             if isinstance(v, bool) or not isinstance(v, (int, float)):
@@ -1969,58 +1968,62 @@ def set_rtpc_curve(
             )
         normalized.append({"x": p["x"], "y": p["y"], "shape": p["shape"]})
 
-    obj: dict = {
-        "object": object_path,
-        "@RTPC": [
-            {
-                "type": "RTPC",
-                "name": "",
-                "@PropertyName": property_name,
-                "@ControlInput": control_input_ref,
-                "@Curve": {"type": "Curve", "points": normalized},
-            }
-        ],
+    # 1. Resolve control_input_ref to a GUID for reliable ID-based comparison.
+    #    Matching by name is fragile — GUIDs are rename-proof.
+    existing_id: str | None = None
+    try:
+        gp_result = waapi_call("ak.wwise.core.object.get", {
+            "from": {"path": [control_input_ref]},
+            "options": {"return": ["id"]}
+        })
+        control_input_id: str | None = None
+        for entry in (gp_result.get("return") or []):
+            control_input_id = entry.get("id")
+            break
+
+        if control_input_id:
+            result = waapi_call("ak.wwise.core.object.get", {
+                "from": {"path": [object_path]},
+                "options": {"return": ["@RTPC", "@RTPC.@PropertyName", "@RTPC.@ControlInput"]}
+            })
+            for entry in (result.get("return") or []):
+                rtpc_list = entry.get("@RTPC") or []
+                prop_names = entry.get("@RTPC.@PropertyName") or []
+                control_inputs = entry.get("@RTPC.@ControlInput") or []
+                for rtpc, prop, ci in zip(rtpc_list, prop_names, control_inputs):
+                    ci_id = ci.get("id") if isinstance(ci, dict) else None
+                    if prop == property_name and ci_id == control_input_id:
+                        existing_id = rtpc.get("id")
+                        break
+    except Exception:
+        pass  # If lookup fails, fall through to append behaviour
+
+    curve_payload = {"type": "Curve", "points": normalized}
+
+    # 2a. Existing binding found — update the RTPC object directly by GUID.
+    #     Passing "id" inside the @RTPC list entry causes WAAPI to reject with
+    #     "id is already in use", so we address the RTPC child object directly instead.
+    if existing_id:
+        obj = {"object": existing_id, "@Curve": curve_payload}
+        if platform is not None:
+            obj["platform"] = platform
+        response = waapi_call("ak.wwise.core.object.set", {"objects": [obj]})
+        return _require_non_none(response, "ak.wwise.core.object.set")
+
+    # 2b. No existing binding — append a fresh RTPC entry to the parent.
+    rtpc_entry: dict = {
+        "type": "RTPC",
+        "name": "",
+        "@PropertyName": property_name,
+        "@ControlInput": control_input_ref,
+        "@Curve": curve_payload,
     }
+    obj = {"object": object_path, "@RTPC": [rtpc_entry]}
     if platform is not None:
         obj["platform"] = platform
 
-    args = {"objects": [obj], "onNameConflict": "merge"}
-    # @RTPC list has SupportListOperations="false" in WObjects.xml; omit listMode.
-
-    try:
-        response = waapi_call("ak.wwise.core.object.set", args)
-    except WwisePyLibError:
-        raise
-    except Exception as e:
-        raise WwiseApiError(
-            f"Failed to set RTPC curve: {e}",
-            operation="ak.wwise.core.object.set",
-            details={
-                "error_type": type(e).__name__,
-                "object_path": object_path,
-                "property_name": property_name,
-                "control_input_ref": control_input_ref,
-                "point_count": len(points),
-            },
-        )
-
+    response = waapi_call("ak.wwise.core.object.set", {"objects": [obj], "onNameConflict": "replace"})
     return _require_non_none(response, "ak.wwise.core.object.set")
-
-def _normalize_curve_point(point) -> dict:
-    """Normalize a curve point into the WAAPI {'x', 'y', 'shape'} dict form."""
-    if isinstance(point, dict):
-        if "x" not in point or "y" not in point:
-            raise ValueError(f"curve point dict must contain 'x' and 'y': {point}")
-        return {"x": point["x"], "y": point["y"], "shape": point.get("shape", "Linear")}
-    if isinstance(point, (tuple, list)):
-        if len(point) == 2:
-            x, y, shape = (*point, "Linear")
-        elif len(point) == 3:
-            x, y, shape = point
-        else:
-            raise ValueError(f"curve point tuple must be (x, y) or (x, y, shape): {point}")
-        return {"x": x, "y": y, "shape": shape}
-    raise TypeError(f"unsupported curve point type: {type(point).__name__}")
 
 def set_reference(
     object_path: str,
