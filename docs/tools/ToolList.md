@@ -45,6 +45,21 @@ Creates one or more Wwise objects (Actor-Mixers, Buses, Containers, Sounds, Work
 
 ---
 
+### `create_blend_tracks`
+
+**Description**  
+Creates one or more Blend Tracks inside existing Wwise Blend Containers. If no Blend Container paths are provided, the command can re-use `prev_response_objects` from the last call.
+
+**Note**: this only creates the Blend Track objects themselves. It does not assign a crossfade RTPC or Game Parameter. Those relationships must be configured separately.
+
+**Example prompts**
+
+- “Create two Blend Tracks called `Near` and `Far` inside `\Actor-Mixer Hierarchy\Vehicles\Engine_BlendContainer`.”
+- “Using the Blend Containers returned from the previous call, create Blend Tracks named `Idle`, `Cruise`, and `MaxRPM` in each of them.”
+- “Create a Blend Track called `Interior` and another called `Exterior` inside `\Actor-Mixer Hierarchy\Ambience\Room_BlendContainer`.”
+
+---
+
 ### `create_events`
 
 **Description**  
