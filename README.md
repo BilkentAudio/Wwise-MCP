@@ -80,10 +80,10 @@ It is still under active development and should not be used with Wwise projects 
 - **Wwise Session Connection**: Connects to the active Wwise session so the agent can issue WAAPI commands to the appropriate wwise session.
 - **Hierarchy Indexing**: Scans a parent path and builds a path-first index of the subtree for fast lookup and navigation.
 - **Object Creation & Organization**: Creates actor-mixers, containers, buses, work units, soundbanks, folders, and more under specified parent paths, and can move or rename them in batches.
-- **Property, Reference & Automation Configuration**: Sets object references, configures RTPC curves, attenuation curves, property randomizations.
+- **Property, Reference & Automation Configuration**: Sets object references, configures RTPC curves, attenuation curves and property randomizations.
 - **Container Assignment & Playback Logic**: Assigns children to Switch Containers, Blend Tracks, and Random/Sequence Container playlists, enabling automated setup of switch-based, blend-based, and randomized playback structures.
 - **Event Authoring**: Creates multiple Wwise events in one batch from source objects and parent paths, and lists all existing event names.
-- **Music Authoring & Interactive Music Setup**: Creates Blend Tracks, assigns Music Switch Container arguments and entries, builds Music Playlist hierarchies, and retrieves authored Music Transition rules including sync, fade, and transition-segment settings.
+- **Music Authoring & Interactive Music Setup**: Assigns Music Switch Container arguments and entries, builds Music Playlist hierarchies, and retrieves authored Music Transition rules including sync, fade, and transition-segment settings.
 - **Game Object Management**: Creates, moves, and unregisters game objects in batches, with full 3D positioning support and a global fallback object.
 - **RTPC / Switch / State Setup**: Batch-creates RTPCs, switch groups, switches, state groups, and states, and exposes helpers to list and set them at runtime.
 - **Audio Import & Discovery**: Imports folders of audio into Wwise under a target parent, and lists all audio files under a given file-system path.
