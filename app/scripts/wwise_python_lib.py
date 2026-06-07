@@ -1909,6 +1909,170 @@ def set_playlist_root(
 
     return set_object(playlist_container_path, {"@PlaylistRoot": root})
 
+
+NULL_GUID = "{00000000-0000-0000-0000-000000000000}"
+ 
+# Sensible defaults for an (any) -> (any) transition rule.
+# Enum reference (verified against the MusicTransition WAAPI property table):
+#   ExitSourceAt:                   0=Immediate 1=NextGrid 2=NextBar 3=NextBeat
+#                                   4=NextCue 5=CustomCue 7=ExitCue
+#                                   8=Never (music tracks only). Wwise default = 7.
+#   DestinationJumpPositionPreset:  0=EntryCue 1=SameTime 2=RandomCue
+#   (SyncTo)                        3=RandomCustomCue 4=LastExitPosition
+#   DestinationPlaylistJumpTo:      0=StartOfPlaylist 1=SpecificItem
+#   (JumpTo)                        2=LastPlayed 3=NextSegment
+#   Source/DestinationContextType:  0=Any 1=Nothing 2=Object
+_TRANSITION_DEFAULTS = {
+    "@ExitSourceAt": 7,
+    "@DestinationJumpPositionPreset": 0,
+    "@DestinationPlaylistJumpTo": 0,
+    "@UseTransitionObject": False,
+    "@EnableSourceFadeOut": False,
+    "@EnableDestinationFadeIn": False,
+    "@EnableTransitionFadeIn": False,
+    "@EnableTransitionFadeOut": False,
+    "@PlayDestinationPreEntry": True,
+    "@PlaySourcePostExit": True,
+    "@PlayTransitionPostExit": True,
+    "@PlayTransitionPreEntry": True,
+    "@JumpToCustomCueMatchMode": 1,
+    "@ExitSourceCustomCueMatchName": "",
+    "@JumpToCustomCueMatchName": "",
+    "@SourceContextType": 0,
+    "@DestinationContextType": 0,
+    "@SourceContextObject": NULL_GUID,
+    "@DestinationContextObject": NULL_GUID
+}
+
+
+def _build_transition_child(rule: dict) -> dict:
+    """
+    Build one MusicTransition schema dict from a friendly rule spec.
+ 
+    Rule keys use the WAAPI property name WITHOUT the leading '@', e.g.
+    {"ExitSourceAt": 2, "DestinationJumpPositionPreset": 1}. Unspecified
+    properties fall back to _TRANSITION_DEFAULTS.
+ 
+    Source/destination scoping:
+      - Omit "source"/"destination" (or pass None)  -> Type 0 (Any).
+      - Pass a path or GUID                          -> Type 2 (Object) + ref.
+      For an explicit "Nothing" rule, pass the raw "SourceContextType": 1
+      (no object) instead of the "source" key.
+    """
+    child = {"type": "MusicTransition", "name": ""}
+    child.update(_TRANSITION_DEFAULTS)
+ 
+    for key, value in rule.items():
+        if key in ("source", "destination"):
+            continue
+        child["@" + key.lstrip("@")] = value
+ 
+    if "source" in rule:
+        src = rule["source"]
+        if src is None:
+            child["@SourceContextType"] = 0
+            child["@SourceContextObject"] = NULL_GUID
+        else:
+            child["@SourceContextType"] = 2          # Object
+            child["@SourceContextObject"] = src
+ 
+    if "destination" in rule:
+        dst = rule["destination"]
+        if dst is None:
+            child["@DestinationContextType"] = 0
+            child["@DestinationContextObject"] = NULL_GUID
+        else:
+            child["@DestinationContextType"] = 2      # Object
+            child["@DestinationContextObject"] = dst
+ 
+    return child
+
+
+def _get_transition_root_id(music_object_path: str) -> str:
+    """Return the GUID of the music object's @TransitionRoot node."""
+    info = get_objects_info([music_object_path], ["@TransitionRoot"]).get("return", [])
+    if not info or "@TransitionRoot" not in info[0]:
+        raise RuntimeError(f"No @TransitionRoot found on {music_object_path}")
+    return info[0]["@TransitionRoot"]["id"]
+
+
+def _apply_rule_to_child(child_id: str, rule: dict) -> None:
+    """
+    Set every property/reference of a rule on an existing MusicTransition child,
+    in place (by GUID). object.set accepts both scalar @props and reference @props
+    (a path/GUID value) in one call, so no separate setReference is needed.
+    """
+    props = {k: v for k, v in _build_transition_child(rule).items() if k.startswith("@")}
+    return set_object(child_id, props)
+
+
+def add_music_transition(music_object_path: str, rule: dict, parent_id: str | None = None) -> dict:
+    """
+    APPEND a single transition rule, preserving existing ones.
+
+    Creates a new MusicTransition as a child of the EXISTING @TransitionRoot
+    (parent-by-GUID), then sets its properties in place. The root is never
+    replaced, so its GUID is stable and the create emits a child-added
+    notification the Transition Matrix view follows live (no reselect needed).
+
+    Unlike the old replace-all approach, existing rules are never round-tripped,
+    so no property is lost regardless of _READABLE_PROPS coverage.
+    """
+    if not music_object_path:
+        raise ValueError("music_object_path must be specified")
+    if not rule:
+        raise ValueError("rule must be a non-empty dict")
+
+    parent = parent_id or _get_transition_root_id(music_object_path)
+    child = create_object(parent, "Transition", "MusicTransition")
+    _apply_rule_to_child(child["id"], rule)
+    return child
+
+
+def add_transition_group(music_object_path: str, name: str = "Group") -> dict:
+    root_id = _get_transition_root_id(music_object_path)
+    group = create_object(root_id, name, "MusicTransition")
+    set_property(group["id"], "IsFolder", True)
+    return group
+
+
+def set_music_transitions(
+    music_object_path: str,
+    rules: list[dict],
+    root_props: dict | None = None,
+) -> None:
+    """
+    REPLACE-ALL, in place. The @TransitionRoot is preserved (GUID stable, view
+    refreshes live). The undeletable first/default child is repurposed to
+    rules[0]; remaining old children are deleted; rules[1:] are created anew
+    under the same root.
+    """
+    if not music_object_path:
+        raise ValueError("music_object_path must be specified")
+    if not rules:
+        raise ValueError("rules must contain at least one rule")
+
+    root_id = _get_transition_root_id(music_object_path)
+    
+    # DIRECT children of the root only — not the flattened get_music_transitions view.
+    direct = run_waql(f'$ "{root_id}" select children', ["id"])
+
+    if root_props:
+        set_object(root_id, {"@" + k.lstrip("@"): v for k, v in root_props.items()})
+
+    if direct:
+        _apply_rule_to_child(direct[0]["id"], rules[0])
+        for child in direct[1:]:          # deleting a group cascades its nested rules
+            delete_object(child["id"])
+        remaining = rules[1:]
+    else:
+        remaining = rules
+
+    for rule in remaining:
+        child = create_object(root_id, "Transition", "MusicTransition")
+        _apply_rule_to_child(child["id"], rule)
+
+
 def set_rtpc_curve(
     object_path: str,
     property_name: str,

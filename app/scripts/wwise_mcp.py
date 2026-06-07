@@ -834,6 +834,44 @@ def set_rtpc_curve(
         logger.exception("Failed to set RTPC curve via object.set.")
         raise
 
+def add_music_transition(
+    music_object_path: str,
+    rule: dict,
+    parent_id: str | None = None
+) -> None:
+
+    if not music_object_path:
+        raise ValueError("music_object_path must be specified")
+
+    if not rule:
+        raise ValueError("rule must be a non-empty dict")
+
+    return WwisePythonLibrary.add_music_transition(music_object_path, rule, parent_id)
+
+def add_transition_group(
+    music_object_path: str,
+    name: str = "Group"
+) -> None:
+
+    if not music_object_path:
+        raise ValueError("music_object_path must be specified")
+
+    return WwisePythonLibrary.add_transition_group(music_object_path, name)
+
+def set_music_transitions(
+    music_object_path: str,
+    rules: list[dict],
+    root_props: dict | None = None
+) -> None:
+
+    if not music_object_path:
+        raise ValueError("music_object_path must be specified")
+
+    if not rules:
+        raise ValueError("rules must contain at least one rule")
+
+    return WwisePythonLibrary.set_music_transitions(music_object_path, rules, root_props)
+
 def set_object_reference( 
     object_path: str, 
     reference_type: str, 
@@ -1342,6 +1380,33 @@ COMMANDS: dict[str, Command] = {
             "@PlayDestinationPreEntry / @PlaySourcePostExit / @PlayTransitionPreEntry / @PlayTransitionPostExit — bool, pre/post entry/exit play flags. "
             "@ExitSourceCustomCueMatchName / @JumpToCustomCueMatchName — str, custom cue names when using custom cue modes. "
             "@JumpToCustomCueMatchMode — custom cue match mode for JumpTo. "
+    ),
+    "add_music_transition": Command(
+        func=add_music_transition,
+        doc="Appends one transition rule to a music object's matrix (Music Switch/Playlist Container or Segment) without disturbing existing rules; use set_music_transitions for full replace-all. "
+            "Args: music_object_path: str, rule: dict, parent_id: str | None = None. Returns the created rule dict. "
+            "parent_id — optional GUID of a transition group (folder) to create the rule inside; omit to add at the matrix root. Get a group's id from add_transition_group. "
+            "rule keys use MusicTransition property names WITHOUT '@'; unspecified keys default to (any)->(any) (ExitSourceAt defaults to 7=Exit Cue). Key enums: "
+            "ExitSourceAt 0=Immediate 1=NextGrid 2=NextBar 3=NextBeat 4=NextCue 5=CustomCue 7=ExitCue 8=Never. "
+            "DestinationJumpPositionPreset (SyncTo) 0=EntryCue 1=SameTime 2=RandomCue 3=RandomCustomCue 4=LastExitPosition. "
+            "DestinationPlaylistJumpTo (JumpTo) 0=StartOfPlaylist 1=SpecificItem 2=LastPlayed 3=NextSegment. "
+            "source/destination — optional path/GUID scoping the from/to object; omit for (any). Other supported keys: UseTransitionObject, Enable{Source,Destination,Transition}Fade{Out,In}, Play{Destination,Source,Transition}{Pre,Post}{Entry,Exit}, JumpToCustomCueMatchMode."
+    ),
+    "add_transition_group": Command(
+        func=add_transition_group,
+        doc="Creates a transition group (folder) in a music object's matrix to organize rules under it. A group is a MusicTransition with @IsFolder=true; it holds no rule properties itself. "
+            "Args: music_object_path: str, name: str = 'Group'. Returns the created group dict (use its 'id' as parent_id in add_music_transition to nest rules inside). "
+            "Equivalent to 'Add Group' in the Transitions window."
+    ),
+    "set_music_transitions": Command(
+        func=set_music_transitions,
+        doc="Replaces a music object's ENTIRE transition matrix (Music Switch/Playlist Container or Segment) with the given rules; existing rules are discarded and @TransitionRoot is recreated. Use add_music_transition to append one rule non-destructively. "
+            "Args: music_object_path: str, rules: list[dict], root_props: dict | None = None. Returns None. "
+            "Each rule uses MusicTransition property names WITHOUT '@'; rules order = matrix order; unspecified keys default to (any)->(any) (ExitSourceAt defaults to 7=Exit Cue). Key enums: "
+            "ExitSourceAt 0=Immediate 1=NextGrid 2=NextBar 3=NextBeat 4=NextCue 5=CustomCue 7=ExitCue 8=Never. "
+            "DestinationJumpPositionPreset (SyncTo) 0=EntryCue 1=SameTime 2=RandomCue 3=RandomCustomCue 4=LastExitPosition. "
+            "DestinationPlaylistJumpTo (JumpTo) 0=StartOfPlaylist 1=SpecificItem 2=LastPlayed 3=NextSegment. "
+            "source/destination — optional path/GUID scoping the from/to object; omit for (any). Other supported keys: UseTransitionObject, Enable{Source,Destination,Transition}Fade{Out,In}, Play{Destination,Source,Transition}{Pre,Post}{Entry,Exit}, JumpToCustomCueMatchMode. root_props sets properties on the Root node itself."
     ),
     "import_audio_files" : Command(
         func=import_audio, 
