@@ -5,6 +5,7 @@ import secrets
 import time
 import logging
 import wwise_session as WwiseSession
+import re
 
 from wwise_errors import (
     WwisePyLibError,
@@ -1760,10 +1761,15 @@ def assign_music_arguments(
     if not group_paths:
         raise ValueError("group_paths must contain at least one path")
 
-    arguments = [
-        {"type": "MusicArgumentsSlot", "name": "", "@Argument": path}
-        for path in group_paths
-    ]
+    use_slot_schema = _get_wwise_major_version() >= 2025
+
+    if use_slot_schema:
+        arguments = [
+            {"type": "MusicArgumentsSlot", "name": "", "@Argument": path}
+            for path in group_paths
+        ]
+    else:  # 2024 and earlier: bare path strings
+        arguments = list(group_paths)
 
     return set_object(container_path, {"@Arguments": arguments})
 
@@ -1816,6 +1822,8 @@ def assign_music_entries(
 
     multi_switch_entries = []
 
+    use_slot_schema = _get_wwise_major_version() >= 2025
+
     for entry in entries:
         sos = entry.get("state_or_switch")
         audio_node = entry.get("audio_node")
@@ -1827,10 +1835,13 @@ def assign_music_entries(
 
         paths = [sos] if isinstance(sos, str) else list(sos)
 
-        entry_path = [
-            {"type": "EntryPathSlot", "name": "", "@EntryPathObject": p}
-            for p in paths
-        ]
+        if use_slot_schema:
+            entry_path = [
+                {"type": "EntryPathSlot", "name": "", "@EntryPathObject": p}
+                for p in paths
+            ]
+        else:  # 2024 and earlier: bare path strings
+            entry_path = list(paths)
 
         multi_switch_entries.append({
             "type": "MultiSwitchEntry",
@@ -1945,47 +1956,40 @@ _TRANSITION_DEFAULTS = {
 }
 
 
-def _build_transition_child(rule: dict) -> dict:
+def _apply_context(props: dict, rule: dict, key: str, prefix: str) -> None:
+    """Translate source/destination shorthand into Context Type + Object refs.
+    None -> Any (Type 0, null ref); a path/GUID -> Object (Type 2, ref)."""
+    if key not in rule:
+        return
+    value = rule[key]
+    props[f"@{prefix}ContextType"] = 0 if value is None else 2
+    props[f"@{prefix}ContextObject"] = NULL_GUID if value is None else value
+
+
+def _build_transition_child(rule: dict, edit: bool = False) -> dict:
     """
-    Build one MusicTransition schema dict from a friendly rule spec.
- 
-    Rule keys use the WAAPI property name WITHOUT the leading '@', e.g.
-    {"ExitSourceAt": 2, "DestinationJumpPositionPreset": 1}. Unspecified
-    properties fall back to _TRANSITION_DEFAULTS.
- 
-    Source/destination scoping:
-      - Omit "source"/"destination" (or pass None)  -> Type 0 (Any).
-      - Pass a path or GUID                          -> Type 2 (Object) + ref.
-      For an explicit "Nothing" rule, pass the raw "SourceContextType": 1
-      (no object) instead of the "source" key.
+    Build the @-prefixed property dict for a transition rule.
+
+    edit=False (create/replace): merge _TRANSITION_DEFAULTS, then the caller's
+        keys — a fully-specified rule. Unspecified props get (any)->(any) defaults.
+    edit=True (partial update): only the caller's keys are emitted. Properties
+        not passed are omitted, so set_object leaves them untouched on the live
+        object — no read-back required.
     """
-    child = {"type": "MusicTransition", "name": ""}
-    child.update(_TRANSITION_DEFAULTS)
- 
+    props = {} if edit else dict(_TRANSITION_DEFAULTS)
+
     for key, value in rule.items():
         if key in ("source", "destination"):
             continue
-        child["@" + key.lstrip("@")] = value
- 
-    if "source" in rule:
-        src = rule["source"]
-        if src is None:
-            child["@SourceContextType"] = 0
-            child["@SourceContextObject"] = NULL_GUID
-        else:
-            child["@SourceContextType"] = 2          # Object
-            child["@SourceContextObject"] = src
- 
-    if "destination" in rule:
-        dst = rule["destination"]
-        if dst is None:
-            child["@DestinationContextType"] = 0
-            child["@DestinationContextObject"] = NULL_GUID
-        else:
-            child["@DestinationContextType"] = 2      # Object
-            child["@DestinationContextObject"] = dst
- 
-    return child
+        props["@" + key.lstrip("@")] = value
+
+    _apply_context(props, rule, "source", "Source")
+    _apply_context(props, rule, "destination", "Destination")
+    return props
+
+
+def _apply_rule_to_child(child_id: str, rule: dict, edit: bool = False) -> None:
+    return set_object(child_id, _build_transition_child(rule, edit=edit))
 
 
 def _get_transition_root_id(music_object_path: str) -> str:
@@ -1995,16 +1999,14 @@ def _get_transition_root_id(music_object_path: str) -> str:
         raise RuntimeError(f"No @TransitionRoot found on {music_object_path}")
     return info[0]["@TransitionRoot"]["id"]
 
-
-def _apply_rule_to_child(child_id: str, rule: dict) -> None:
-    """
-    Set every property/reference of a rule on an existing MusicTransition child,
-    in place (by GUID). object.set accepts both scalar @props and reference @props
-    (a path/GUID value) in one call, so no separate setReference is needed.
-    """
-    props = {k: v for k, v in _build_transition_child(rule).items() if k.startswith("@")}
-    return set_object(child_id, props)
-
+def _get_wwise_major_version() -> int:
+    """Returns the Wwise major version (e.g. 2024, 2025) parsed from project displayTitle."""
+    info = get_project_info()
+    title = info.get("displayTitle", "")
+    m = re.search(r"Wwise\s+(\d{4})", title)
+    if not m:
+        raise RuntimeError(f"Could not parse Wwise version from displayTitle: {title!r}")
+    return int(m.group(1))
 
 def add_music_transition(music_object_path: str, rule: dict, parent_id: str | None = None) -> dict:
     """
@@ -2034,6 +2036,16 @@ def add_transition_group(music_object_path: str, name: str = "Group") -> dict:
     group = create_object(root_id, name, "MusicTransition")
     set_property(group["id"], "IsFolder", True)
     return group
+
+
+def edit_music_transition(transition_id: str, rule: dict) -> None:
+    """Edit a transition rule in place by GUID. `rule` is a partial spec —
+    only the keys passed are changed; everything else is preserved."""
+    if not transition_id:
+        raise ValueError("transition_id must be specified")
+    if not rule:
+        raise ValueError("rule must be a non-empty dict")
+    return _apply_rule_to_child(transition_id, rule, edit=True)
 
 
 def set_music_transitions(

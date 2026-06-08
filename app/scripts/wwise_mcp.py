@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
-import re
 import subprocess
 import platform
 import os
@@ -858,6 +857,17 @@ def add_transition_group(
 
     return WwisePythonLibrary.add_transition_group(music_object_path, name)
 
+def edit_music_transition(
+    transition_id: str, 
+    rule: dict
+) -> None:
+    
+    if not transition_id:
+        raise ValueError("transition_id must be specified")
+    if not rule:
+        raise ValueError("rule must be a non-empty dict")
+    return WwisePythonLibrary.edit_music_transition(transition_id, rule)
+
 def set_music_transitions(
     music_object_path: str,
     rules: list[dict],
@@ -1397,6 +1407,13 @@ COMMANDS: dict[str, Command] = {
         doc="Creates a transition group (folder) in a music object's matrix to organize rules under it. A group is a MusicTransition with @IsFolder=true; it holds no rule properties itself. "
             "Args: music_object_path: str, name: str = 'Group'. Returns the created group dict (use its 'id' as parent_id in add_music_transition to nest rules inside). "
             "Equivalent to 'Add Group' in the Transitions window."
+    ),
+     "edit_music_transition": Command(
+        func=edit_music_transition,
+        doc="Edits an existing transition rule IN PLACE by GUID; a partial update — only the keys passed are changed, everything else is preserved. Get the GUID from add_music_transition's return or get_music_transitions. "
+            "Args: transition_id: str, rule: dict. Returns None. "
+            "rule keys are the same as add_music_transition; omitted keys are left untouched on the live rule. "
+            "source/destination — path/GUID to re-scope, or None to reset that endpoint to (any) and clear the old reference."
     ),
     "set_music_transitions": Command(
         func=set_music_transitions,
