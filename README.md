@@ -8,7 +8,7 @@
 [![Wwise](https://img.shields.io/badge/Wwise%20-2024.1%2B-blue.svg)](https://www.audiokinetic.com/en/wwise/)
 [![GitHub release](https://img.shields.io/github/v/release/BilkentAudio/Wwise-MCP)](https://github.com/BilkentAudio/Wwise-MCP/releases/latest)
 [![Status](https://img.shields.io/badge/Status-Experimental-red)]()
-![GitHub Downloads](https://img.shields.io/github/downloads/BilkentAudio/Wwise-MCP/total)
+[![GitHub Downloads](https://img.shields.io/github/downloads/BilkentAudio/Wwise-MCP/total?label=Downloads)](https://github.com/BilkentAudio/Wwise-MCP/releases)
 
 </div>
 
