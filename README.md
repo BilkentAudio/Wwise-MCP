@@ -7,8 +7,8 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Wwise](https://img.shields.io/badge/Wwise%20-2024.1%2B-blue.svg)](https://www.audiokinetic.com/en/wwise/)
 [![GitHub release](https://img.shields.io/github/v/release/BilkentAudio/Wwise-MCP)](https://github.com/BilkentAudio/Wwise-MCP/releases/latest)
-[![Status](https://img.shields.io/badge/Status-Experimental-red)]()
 [![GitHub Downloads](https://img.shields.io/github/downloads/BilkentAudio/Wwise-MCP/total?label=Downloads)](https://github.com/BilkentAudio/Wwise-MCP/releases)
+[![Status](https://img.shields.io/badge/Status-Experimental-red)]()
 
 </div>
 
